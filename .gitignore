@@ -1,0 +1,21 @@
+.codex/
+work/
+
+# Dependencies and local runtime output
+node_modules/
+outputs/**/node_modules/
+outputs/**/.metabolic-tracker-data/
+
+# Generated deployment artifacts and local secrets
+outputs/aliyun-oneclick/
+outputs/*.zip
+outputs/agent-skill-package/
+
+# Environment files and logs
+.env
+.env.*
+*.log
+
+# OS/editor noise
+.DS_Store
+Thumbs.db

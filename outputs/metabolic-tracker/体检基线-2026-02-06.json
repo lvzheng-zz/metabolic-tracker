@@ -1,0 +1,35 @@
+{
+  "type": "metabolic-tracker-merge",
+  "mode": "merge",
+  "source": {
+    "label": "2026-02-06 体检报告",
+    "file": "体检.pdf"
+  },
+  "settings": {
+    "sex": "male",
+    "age": 29,
+    "height": 177.3,
+    "fallbackWeight": 104.8,
+    "targetWeight": 75.4
+  },
+  "bodyEntries": [
+    {
+      "id": "body-exam-2026-02-06",
+      "date": "2026-02-06",
+      "weight": 104.8,
+      "waist": 110,
+      "systolic": 134,
+      "diastolic": 95,
+      "fastingGlucose": 5.83,
+      "bodyFat": 36.4,
+      "muscleMass": 62.9,
+      "hba1c": 5.4,
+      "uricAcid": 543,
+      "totalCholesterol": 6.12,
+      "ldl": 4.75,
+      "alt": 58,
+      "creatinine": 98,
+      "notes": "体检报告基线；轻度脂肪肝；甘油三酯1.62；HDL 1.10；Non-HDL 5.02；eGFR 91；报告建议关注血压、血脂、尿酸、空腹血糖。"
+    }
+  ]
+}

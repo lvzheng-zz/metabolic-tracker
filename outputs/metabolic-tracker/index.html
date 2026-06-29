@@ -1,0 +1,971 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f7fbf6" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="减脂记录" />
+    <title>代谢减脂记录</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">
+            <span class="icon" data-icon="activity"></span>
+          </div>
+          <div>
+            <h1>代谢减脂记录</h1>
+            <p>饮食、身体、运动联动台账</p>
+          </div>
+          <button id="profileButton" class="profile-button" type="button" aria-haspopup="dialog" aria-expanded="false">
+            <span class="icon" data-icon="user"></span>
+            <span>
+              <strong id="profileName">个人中心</strong>
+              <small id="profileSummary">未设置</small>
+            </span>
+          </button>
+        </div>
+        <div class="top-actions">
+          <label class="field compact">
+            <span>日期</span>
+            <input id="activeDate" type="date" />
+          </label>
+          <button id="exportTop" class="icon-button" type="button" title="导出数据">
+            <span class="icon" data-icon="download"></span>
+            <span>导出</span>
+          </button>
+        </div>
+      </header>
+
+      <div id="profileModal" class="modal-backdrop" hidden>
+        <section class="profile-modal" role="dialog" aria-modal="true" aria-labelledby="profileTitle">
+          <div class="modal-head">
+            <div>
+              <p class="eyebrow">个人中心</p>
+              <h2 id="profileTitle">信息与目标</h2>
+            </div>
+            <button id="profileClose" class="close-button" type="button" title="关闭">
+              <span class="icon" data-icon="x"></span>
+            </button>
+          </div>
+          <form id="settingsForm" class="form-grid">
+            <div class="form-section-title span-2">基础资料</div>
+            <label class="field">
+              <span>性别</span>
+              <select name="sex">
+                <option value="">不使用公式</option>
+                <option value="female">女</option>
+                <option value="male">男</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>年龄</span>
+              <input name="age" type="number" min="12" max="100" step="1" />
+            </label>
+            <label class="field">
+              <span>身高 cm</span>
+              <input name="height" type="number" min="100" max="230" step="0.1" />
+            </label>
+            <label class="field">
+              <span>估算体重 kg</span>
+              <input name="fallbackWeight" type="number" min="20" step="0.1" />
+            </label>
+            <div class="form-section-title span-2">减脂目标</div>
+            <label class="field">
+              <span>日常活动</span>
+              <select name="activityFactor">
+                <option value="1.2">久坐</option>
+                <option value="1.375">轻活动</option>
+                <option value="1.55">中等活动</option>
+                <option value="1.725">高活动</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>计划缺口 kcal</span>
+              <input name="deficit" type="number" min="0" max="1000" step="50" />
+            </label>
+            <label class="field">
+              <span>手动基础目标</span>
+              <input name="manualTarget" type="number" min="800" step="50" />
+            </label>
+            <label class="field">
+              <span>运动吃回比例 %</span>
+              <input name="exerciseCredit" type="number" min="0" max="100" step="5" />
+            </label>
+            <label class="field">
+              <span>最低摄入提醒</span>
+              <input name="minIntake" type="number" min="0" step="50" />
+            </label>
+            <label class="field">
+              <span>目标体重 kg</span>
+              <input name="targetWeight" type="number" min="20" step="0.1" />
+            </label>
+            <div class="form-section-title span-2">AI 饮食识别</div>
+            <label class="field span-2">
+              <span>识别接口</span>
+              <input name="aiFoodEndpoint" placeholder="/api/recognize-food" />
+            </label>
+            <button class="primary-button span-2" type="submit">
+              <span class="icon" data-icon="save"></span>
+              <span>保存个人中心</span>
+            </button>
+            <p id="settingsStatus" class="save-status span-2" aria-live="polite"></p>
+          </form>
+        </section>
+      </div>
+
+      <nav class="tabs" aria-label="主要视图">
+        <button class="tab is-active" type="button" data-view="dashboard">
+          <span class="icon" data-icon="layout-dashboard"></span>
+          <span>总览</span>
+        </button>
+        <button class="tab" type="button" data-view="food">
+          <span class="icon" data-icon="utensils"></span>
+          <span>饮食</span>
+        </button>
+        <button class="tab" type="button" data-view="body">
+          <span class="icon" data-icon="ruler"></span>
+          <span>身体</span>
+        </button>
+        <button class="tab" type="button" data-view="exercise">
+          <span class="icon" data-icon="bike"></span>
+          <span>运动</span>
+        </button>
+        <button class="tab" type="button" data-view="trends">
+          <span class="icon" data-icon="chart-line"></span>
+          <span>趋势</span>
+        </button>
+        <button class="tab" type="button" data-view="settings">
+          <span class="icon" data-icon="database"></span>
+          <span>数据</span>
+        </button>
+      </nav>
+
+      <main>
+        <section id="dashboard" class="view is-active">
+          <div class="dashboard-grid">
+            <section class="panel hero-panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">今日预算</p>
+                  <h2 id="budgetTitle">-- kcal</h2>
+                </div>
+                <div class="balance-ring" id="balanceRing" aria-label="今日热量余量">
+                  <span id="balanceValue">--</span>
+                  <small>剩余</small>
+                </div>
+              </div>
+              <div class="hero-companion" aria-hidden="true">
+                <div class="bear-mascot">
+                  <svg viewBox="0 0 160 140" role="img">
+                    <ellipse class="bear-shadow" cx="82" cy="124" rx="52" ry="10"></ellipse>
+                    <circle class="bear-ear" cx="47" cy="40" r="22"></circle>
+                    <circle class="bear-ear" cx="113" cy="40" r="22"></circle>
+                    <circle class="bear-face" cx="80" cy="70" r="48"></circle>
+                    <circle class="bear-cheek" cx="51" cy="78" r="10"></circle>
+                    <circle class="bear-cheek" cx="109" cy="78" r="10"></circle>
+                    <circle class="bear-eye" cx="65" cy="61" r="4"></circle>
+                    <circle class="bear-eye" cx="95" cy="61" r="4"></circle>
+                    <ellipse class="bear-muzzle" cx="80" cy="82" rx="19" ry="15"></ellipse>
+                    <circle class="bear-nose" cx="80" cy="76" r="5"></circle>
+                    <path class="bear-smile" d="M72 84 Q80 92 88 84"></path>
+                    <path class="bear-arm bear-arm-left" d="M34 84 Q18 92 20 110"></path>
+                    <path class="bear-arm bear-arm-right" d="M126 84 Q144 90 140 108"></path>
+                    <path class="bear-badge" d="M56 104 H104 Q111 104 111 111 V117 Q111 124 104 124 H56 Q49 124 49 117 V111 Q49 104 56 104Z"></path>
+                    <path class="bear-badge-line" d="M61 114 H99"></path>
+                  </svg>
+                </div>
+              </div>
+              <div class="meter" aria-hidden="true">
+                <div id="calorieMeter"></div>
+              </div>
+              <div class="stats-row">
+                <div>
+                  <span>已摄入</span>
+                  <strong id="todayFoodKcal">--</strong>
+                </div>
+                <div>
+                  <span>运动抵扣</span>
+                  <strong id="todayExerciseKcal">--</strong>
+                </div>
+                <div>
+                  <span>净摄入</span>
+                  <strong id="todayNetKcal">--</strong>
+                </div>
+              </div>
+            </section>
+
+            <section class="panel month-rings-panel">
+              <div class="panel-head month-rings-head">
+                <div>
+                  <p class="eyebrow">月度圆环</p>
+                  <h2 id="monthRingsTitle">本月进度</h2>
+                </div>
+                <div class="month-actions">
+                  <button id="monthPrev" class="month-icon-button" type="button" title="上个月">
+                    <span class="icon" data-icon="chevron-left"></span>
+                  </button>
+                  <button id="monthToday" class="secondary-button" type="button">今天</button>
+                  <button id="monthNext" class="month-icon-button" type="button" title="下个月">
+                    <span class="icon" data-icon="chevron-right"></span>
+                  </button>
+                </div>
+              </div>
+              <div id="monthRingsGrid" class="month-rings-grid" aria-label="月度进度圆环"></div>
+            </section>
+
+            <section class="panel daily-goals-panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">今日推荐</p>
+                  <h2>今日摄入目标</h2>
+                </div>
+              </div>
+              <div class="goal-ring-grid two-goal-rings">
+                <div class="goal-ring-card" id="goalCaloriesRing">
+                  <div class="goal-ring-visual">
+                    <strong id="goalCaloriesPercent">--</strong>
+                    <span>今日热量</span>
+                  </div>
+                  <p><b id="goalCaloriesUsed">--</b> / <span id="goalCaloriesTarget">--</span></p>
+                </div>
+                <div class="goal-ring-card" id="goalProteinRing">
+                  <div class="goal-ring-visual">
+                    <strong id="goalProteinPercent">--</strong>
+                    <span>蛋白</span>
+                  </div>
+                  <p><b id="goalProteinUsed">--</b> / <span id="goalProteinTarget">--</span></p>
+                </div>
+              </div>
+              <div class="target-strip">
+                <div>
+                  <span>每日蛋白</span>
+                  <strong id="targetProtein">--</strong>
+                </div>
+                <div>
+                  <span>每日碳水</span>
+                  <strong id="targetCarbs">--</strong>
+                </div>
+                <div>
+                  <span>每日脂肪</span>
+                  <strong id="targetFat">--</strong>
+                </div>
+              </div>
+            </section>
+
+            <section class="panel weekly-goals-panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">本周目标</p>
+                  <h2>7 天维稳账本</h2>
+                </div>
+              </div>
+              <div class="goal-ring-grid weekly-goal-grid">
+                <div class="goal-ring-card" id="goalWeekRing">
+                  <div class="goal-ring-visual">
+                    <strong id="goalWeekPercent">--</strong>
+                    <span>本周摄入</span>
+                  </div>
+                  <p><b id="goalWeekUsed">--</b> / <span id="goalWeekTarget">--</span></p>
+                </div>
+              </div>
+              <div class="target-strip">
+                <div>
+                  <span>周运动</span>
+                  <strong id="targetExercise">150 min</strong>
+                </div>
+                <div>
+                  <span>日均预算</span>
+                  <strong id="targetWeekDailyAvg">--</strong>
+                </div>
+              </div>
+            </section>
+
+            <section class="panel supplement-summary-panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">今日用药/补剂</p>
+                  <h2 id="supplementSummaryTitle">--</h2>
+                </div>
+                <button class="ghost-button" type="button" data-jump="body">
+                  <span class="icon" data-icon="pill"></span>
+                  <span>管理</span>
+                </button>
+              </div>
+              <div class="supplement-progress">
+                <div class="meter" aria-hidden="true">
+                  <div id="supplementMeter"></div>
+                </div>
+                <span id="supplementSummaryText">--</span>
+              </div>
+              <div id="dashboardSupplementList" class="supplement-mini-list"></div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">联动建议</p>
+                  <h2>今天怎么调</h2>
+                </div>
+              </div>
+              <div id="suggestions" class="suggestion-list"></div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">身体状态</p>
+                  <h2>最新记录</h2>
+                </div>
+                <button class="ghost-button" type="button" data-jump="body">
+                  <span class="icon" data-icon="plus"></span>
+                  <span>添加</span>
+                </button>
+              </div>
+              <div class="metrics-grid">
+                <div>
+                  <span>体重</span>
+                  <strong id="latestWeight">--</strong>
+                </div>
+                <div>
+                  <span>BMI</span>
+                  <strong id="latestBmi">--</strong>
+                </div>
+                <div>
+                  <span>腰围</span>
+                  <strong id="latestWaist">--</strong>
+                </div>
+                <div>
+                  <span>空腹血糖</span>
+                  <strong id="latestGlucose">--</strong>
+                </div>
+              </div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">今日明细</p>
+                  <h2>身体、饮食与运动</h2>
+                </div>
+              </div>
+              <div id="todayTimeline" class="timeline"></div>
+            </section>
+          </div>
+        </section>
+
+        <section id="food" class="view">
+          <div class="two-column">
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">饮食记录</p>
+                  <h2>添加一餐</h2>
+                </div>
+              </div>
+              <div class="ai-photo-box">
+                <div class="ai-photo-actions">
+                  <label class="file-button">
+                    <span class="icon" data-icon="camera"></span>
+                    <span>拍照识别</span>
+                    <input id="foodPhotoInput" type="file" accept="image/*" capture="environment" />
+                  </label>
+                  <button id="recognizeFoodPhoto" class="secondary-button" type="button" disabled>
+                    <span class="icon" data-icon="sparkles"></span>
+                    <span>AI 生成草稿</span>
+                  </button>
+                  <button id="testFoodAi" class="ghost-button" type="button">
+                    <span class="icon" data-icon="info"></span>
+                    <span>接口自检</span>
+                  </button>
+                  <button id="clearFoodPhoto" class="ghost-button" type="button" hidden>
+                    <span class="icon" data-icon="x"></span>
+                    <span>清除</span>
+                  </button>
+                </div>
+                <img id="foodPhotoPreview" class="food-photo-preview" alt="食物照片预览" hidden />
+                <p id="foodAiStatus" class="save-status" aria-live="polite"></p>
+                <div id="foodAiDrafts" class="ai-draft-list"></div>
+              </div>
+              <form id="foodForm" class="form-grid">
+                <label class="field entry-date-field">
+                  <span>日期</span>
+                  <input name="date" type="date" required />
+                </label>
+                <label class="field">
+                  <span>餐次</span>
+                  <select name="meal" required>
+                    <option>早餐</option>
+                    <option>午餐</option>
+                    <option>晚餐</option>
+                    <option>加餐</option>
+                    <option>饮品</option>
+                  </select>
+                </label>
+                <label class="field span-2">
+                  <span>食物</span>
+                  <input name="foodName" list="foodList" placeholder="输入食物名" required />
+                  <datalist id="foodList"></datalist>
+                </label>
+                <label class="field">
+                  <span>重量 g</span>
+                  <input name="grams" type="number" min="1" step="1" placeholder="150" required />
+                </label>
+                <label class="field">
+                  <span>热量 /100g</span>
+                  <input name="kcal100" type="number" min="0" step="1" placeholder="116" required />
+                </label>
+                <label class="field">
+                  <span>蛋白 /100g</span>
+                  <input name="protein100" type="number" min="0" step="0.1" placeholder="2.6" />
+                </label>
+                <label class="field">
+                  <span>碳水 /100g</span>
+                  <input name="carbs100" type="number" min="0" step="0.1" placeholder="25.9" />
+                </label>
+                <label class="field">
+                  <span>脂肪 /100g</span>
+                  <input name="fat100" type="number" min="0" step="0.1" placeholder="0.3" />
+                </label>
+                <label class="field">
+                  <span>备注</span>
+                  <input name="notes" placeholder="少油 / 外卖 / 自制" />
+                </label>
+                <button class="primary-button span-2" type="submit">
+                  <span class="icon" data-icon="plus"></span>
+                  <span>加入饮食</span>
+                </button>
+              </form>
+            </section>
+
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">当天汇总</p>
+                  <h2 id="foodDayTitle">--</h2>
+                </div>
+              </div>
+              <div class="macro-row">
+                <div>
+                  <span>热量 / 目标</span>
+                  <strong id="foodTotalKcal">--</strong>
+                </div>
+                <div>
+                  <span>蛋白 / 推荐</span>
+                  <strong id="foodTotalProtein">--</strong>
+                </div>
+                <div>
+                  <span>碳水 / 推荐</span>
+                  <strong id="foodTotalCarbs">--</strong>
+                </div>
+                <div>
+                  <span>脂肪 / 推荐</span>
+                  <strong id="foodTotalFat">--</strong>
+                </div>
+              </div>
+              <div id="foodEntries" class="entry-list"></div>
+            </section>
+          </div>
+        </section>
+
+        <section id="body" class="view">
+          <div class="two-column body-layout">
+            <div class="body-form-stack">
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">每日记录</p>
+                  <h2>体重、睡眠、用药</h2>
+                </div>
+              </div>
+              <form id="bodyForm" class="form-grid">
+                <label class="field entry-date-field">
+                  <span>日期</span>
+                  <input name="date" type="date" required />
+                </label>
+                <label class="field">
+                  <span>体重 kg</span>
+                  <input name="weight" type="number" min="20" step="0.1" />
+                </label>
+                <label class="field">
+                  <span>睡眠 h</span>
+                  <input name="sleep" type="number" min="0" max="24" step="0.1" />
+                </label>
+                <label class="field span-2">
+                  <span>临时用药/异常</span>
+                  <input name="medication" placeholder="漏服 / 副作用 / 临时药物 / 不舒服" />
+                </label>
+                <label class="field span-2">
+                  <span>备注</span>
+                  <input name="notes" placeholder="饥饿感 / 压力 / 应酬 / 身体状态" />
+                </label>
+                <button class="primary-button span-2" type="submit">
+                  <span class="icon" data-icon="plus"></span>
+                  <span>保存每日记录</span>
+                </button>
+              </form>
+            </section>
+
+            <section class="panel supplement-body-panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">用药/补剂</p>
+                  <h2 id="supplementDayTitle">--</h2>
+                </div>
+                <button id="toggleWorkoutDay" class="ghost-button" type="button">
+                  <span class="icon" data-icon="bike"></span>
+                  <span>今天训练</span>
+                </button>
+              </div>
+              <div class="supplement-actions">
+                <button id="toggleSupplementReminders" class="secondary-button" type="button">
+                  <span class="icon" data-icon="bell"></span>
+                  <span>开启提醒</span>
+                </button>
+                <p id="supplementReminderStatus" class="save-status" aria-live="polite"></p>
+              </div>
+              <div id="todaySupplementList" class="supplement-list"></div>
+              <details class="advanced-fields supplement-settings">
+                <summary>计划设置</summary>
+                <div class="supplement-settings-body">
+                  <div class="panel-head compact-head">
+                    <div>
+                      <p class="eyebrow">计划</p>
+                      <h2>补剂与用药提醒</h2>
+                    </div>
+                    <button id="resetSupplementDefaults" class="ghost-button" type="button">
+                      <span class="icon" data-icon="refresh-cw"></span>
+                      <span>恢复默认</span>
+                    </button>
+                  </div>
+                  <form id="supplementForm" class="form-grid">
+                    <input name="id" type="hidden" />
+                    <label class="field">
+                      <span>名称</span>
+                      <input name="name" placeholder="例如 维生素D3+K2" required />
+                    </label>
+                    <label class="field">
+                      <span>剂量</span>
+                      <input name="dose" placeholder="1粒 / 按医嘱" />
+                    </label>
+                    <label class="field">
+                      <span>时间</span>
+                      <input name="time" type="time" required />
+                    </label>
+                    <label class="field">
+                      <span>时机</span>
+                      <input name="timing" placeholder="早餐后 / 睡前 / 运动前" />
+                    </label>
+                    <label class="field">
+                      <span>类型</span>
+                      <select name="category">
+                        <option value="supplement">补剂</option>
+                        <option value="medicine">药物</option>
+                      </select>
+                    </label>
+                    <label class="field">
+                      <span>频率</span>
+                      <select name="cadence">
+                        <option value="daily">每天</option>
+                        <option value="workout">训练日</option>
+                      </select>
+                    </label>
+                    <label class="field">
+                      <span>状态</span>
+                      <select name="active">
+                        <option value="true">启用</option>
+                        <option value="false">暂停</option>
+                      </select>
+                    </label>
+                    <label class="field">
+                      <span>到点提醒</span>
+                      <select name="reminder">
+                        <option value="true">提醒</option>
+                        <option value="false">不提醒</option>
+                      </select>
+                    </label>
+                    <label class="field span-2">
+                      <span>备注</span>
+                      <input name="notes" placeholder="例如 训练日1片；关节痛时暂停" />
+                    </label>
+                    <button class="primary-button" type="submit">
+                      <span class="icon" data-icon="save"></span>
+                      <span>保存计划</span>
+                    </button>
+                    <button id="clearSupplementForm" class="ghost-button" type="button">
+                      <span class="icon" data-icon="plus"></span>
+                      <span>新增一项</span>
+                    </button>
+                  </form>
+                  <div id="supplementPlanList" class="supplement-plan-list"></div>
+                </div>
+              </details>
+              <div class="note-panel compact-note">
+                <strong>提醒边界</strong>
+                <p>浏览器提醒只在这个页面打开时生效；药物剂量按医生要求执行，打勾只用于记录。</p>
+              </div>
+            </section>
+
+            <div id="checkupModal" class="modal-backdrop" hidden>
+            <section class="profile-modal checkup-modal" role="dialog" aria-modal="true" aria-labelledby="checkupTitle">
+              <div class="modal-head">
+                <div>
+                  <p class="eyebrow">月度复查</p>
+                  <h2 id="checkupTitle">医院/体检指标</h2>
+                </div>
+                <button id="checkupClose" class="close-button" type="button" title="关闭">
+                  <span class="icon" data-icon="x"></span>
+                </button>
+              </div>
+              <form id="checkupForm" class="form-grid">
+                <label class="field entry-date-field">
+                  <span>日期</span>
+                  <input name="date" type="date" required />
+                </label>
+                <label class="field">
+                  <span>腰围 cm</span>
+                  <input name="waist" type="number" min="30" step="0.1" />
+                </label>
+                <label class="field">
+                  <span>收缩压</span>
+                  <input name="systolic" type="number" min="60" step="1" />
+                </label>
+                <label class="field">
+                  <span>舒张压</span>
+                  <input name="diastolic" type="number" min="40" step="1" />
+                </label>
+                <label class="field">
+                  <span>空腹血糖 mmol/L</span>
+                  <input name="fastingGlucose" type="number" min="0" step="0.1" />
+                </label>
+                <label class="field">
+                  <span>餐后血糖 mmol/L</span>
+                  <input name="postMealGlucose" type="number" min="0" step="0.1" />
+                </label>
+                <label class="field">
+                  <span>体脂 %</span>
+                  <input name="bodyFat" type="number" min="0" max="80" step="0.1" />
+                </label>
+                <label class="field">
+                  <span>肌肉量 kg</span>
+                  <input name="muscleMass" type="number" min="0" step="0.1" />
+                </label>
+                <label class="field">
+                  <span>糖化 HbA1c %</span>
+                  <input name="hba1c" type="number" min="0" step="0.1" />
+                </label>
+                <label class="field">
+                  <span>尿酸 umol/L</span>
+                  <input name="uricAcid" type="number" min="0" step="1" />
+                </label>
+                <label class="field">
+                  <span>总胆固醇 mmol/L</span>
+                  <input name="totalCholesterol" type="number" min="0" step="0.01" />
+                </label>
+                <label class="field">
+                  <span>LDL mmol/L</span>
+                  <input name="ldl" type="number" min="0" step="0.01" />
+                </label>
+                <label class="field">
+                  <span>ALT U/L</span>
+                  <input name="alt" type="number" min="0" step="1" />
+                </label>
+                <label class="field">
+                  <span>肌酐 umol/L</span>
+                  <input name="creatinine" type="number" min="0" step="1" />
+                </label>
+                <button class="secondary-button span-2" type="submit">
+                  <span class="icon" data-icon="plus"></span>
+                  <span>保存复查指标</span>
+                </button>
+              </form>
+            </section>
+            </div>
+            </div>
+
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">近期身体</p>
+                  <h2>记录列表</h2>
+                </div>
+                <button id="checkupButton" class="ghost-button" type="button">
+                  <span class="icon" data-icon="plus"></span>
+                  <span>复查指标</span>
+                </button>
+              </div>
+              <div id="bodyEntries" class="entry-list"></div>
+            </section>
+          </div>
+        </section>
+
+        <section id="exercise" class="view">
+          <div class="two-column">
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">运动记录</p>
+                  <h2>添加训练</h2>
+                </div>
+              </div>
+              <form id="exerciseForm" class="form-grid">
+                <label class="field">
+                  <span>日期</span>
+                  <input name="date" type="date" required />
+                </label>
+                <label class="field">
+                  <span>运动类型</span>
+                  <select name="type" required></select>
+                </label>
+                <label class="field">
+                  <span>时长 min</span>
+                  <input name="minutes" type="number" min="1" step="1" required />
+                </label>
+                <label class="field">
+                  <span>强度</span>
+                  <select name="intensity">
+                    <option value="normal">正常</option>
+                    <option value="easy">偏轻</option>
+                    <option value="hard">偏高</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>平均心率 bpm</span>
+                  <input name="heartRate" type="number" min="0" step="1" />
+                </label>
+                <label class="field">
+                  <span>消耗 kcal</span>
+                  <input name="kcal" type="number" min="0" step="1" required />
+                </label>
+                <label class="field">
+                  <span>备注</span>
+                  <input name="notes" placeholder="心率 / 配速 / 器械" />
+                </label>
+                <button class="secondary-button" id="estimateExercise" type="button">
+                  <span class="icon" data-icon="calculator"></span>
+                  <span>估算消耗</span>
+                </button>
+                <button class="primary-button" type="submit">
+                  <span class="icon" data-icon="plus"></span>
+                  <span>加入运动</span>
+                </button>
+              </form>
+            </section>
+
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">当天运动</p>
+                  <h2 id="exerciseDayTitle">--</h2>
+                </div>
+              </div>
+              <div class="macro-row">
+                <div>
+                  <span>总消耗</span>
+                  <strong id="exerciseTotalKcal">--</strong>
+                </div>
+                <div>
+                  <span>计入预算</span>
+                  <strong id="exerciseCreditKcal">--</strong>
+                </div>
+              </div>
+              <div id="exerciseEntries" class="entry-list"></div>
+            </section>
+          </div>
+        </section>
+
+        <section id="trends" class="view">
+          <div class="trend-grid">
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">30 天</p>
+                  <h2>体重与腰围</h2>
+                </div>
+              </div>
+              <canvas id="bodyChart" class="chart" height="260"></canvas>
+            </section>
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">14 天</p>
+                  <h2>摄入与预算</h2>
+                </div>
+              </div>
+              <canvas id="calorieChart" class="chart" height="260"></canvas>
+            </section>
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">7 天</p>
+                  <h2>周汇总</h2>
+                </div>
+              </div>
+              <div class="metrics-grid">
+                <div>
+                  <span>平均摄入</span>
+                  <strong id="weekAvgFood">--</strong>
+                </div>
+                <div>
+                  <span>运动分钟</span>
+                  <strong id="weekMinutes">--</strong>
+                </div>
+                <div>
+                  <span>运动抵扣</span>
+                  <strong id="weekCredit">--</strong>
+                </div>
+                <div>
+                  <span>热量差额</span>
+                  <strong id="weekBalance">--</strong>
+                </div>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section id="settings" class="view">
+          <section class="panel data-panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">数据管理</p>
+                <h2>备份与恢复</h2>
+              </div>
+              <button id="profileShortcut" class="ghost-button" type="button">
+                <span class="icon" data-icon="user"></span>
+                <span>个人中心</span>
+              </button>
+            </div>
+            <div class="data-actions">
+              <button id="exportData" class="secondary-button" type="button">
+                <span class="icon" data-icon="download"></span>
+                <span>导出 JSON</span>
+              </button>
+              <label class="file-button">
+                <span class="icon" data-icon="upload"></span>
+                <span>导入/合并 JSON</span>
+                <input id="importData" type="file" accept="application/json" />
+              </label>
+              <button id="clearData" class="danger-button" type="button">
+                <span class="icon" data-icon="trash-2"></span>
+                <span>清空数据</span>
+              </button>
+            </div>
+            <div class="cloud-sync-box">
+              <div class="panel-head compact-head">
+                <div>
+                  <p class="eyebrow">云端同步</p>
+                  <h2>多设备自动备份</h2>
+                </div>
+                <span id="cloudSyncBadge" class="sync-badge">未登录</span>
+              </div>
+              <div class="cloud-sync-form">
+                <label class="field span-2">
+                  <span>云接口</span>
+                  <input id="cloudApiEndpoint" placeholder="/api" />
+                </label>
+                <label class="field">
+                  <span>账号</span>
+                  <input id="cloudUsername" autocomplete="username" placeholder="你的登录账号" />
+                </label>
+                <label class="field">
+                  <span>密码</span>
+                  <input id="cloudPassword" type="password" autocomplete="current-password" placeholder="只用于登录，不导出" />
+                </label>
+              </div>
+              <div class="cloud-sync-actions">
+                <button id="cloudLogin" class="secondary-button" type="button">
+                  <span class="icon" data-icon="user"></span>
+                  <span>登录并记住</span>
+                </button>
+                <button id="cloudPull" class="ghost-button" type="button">
+                  <span class="icon" data-icon="download"></span>
+                  <span>拉取云端</span>
+                </button>
+                <button id="cloudPush" class="ghost-button" type="button">
+                  <span class="icon" data-icon="upload"></span>
+                  <span>上传当前</span>
+                </button>
+                <button id="cloudLogout" class="ghost-button" type="button">
+                  <span class="icon" data-icon="x"></span>
+                  <span>退出</span>
+                </button>
+              </div>
+              <p id="cloudSyncStatus" class="save-status" aria-live="polite"></p>
+              <p class="cloud-sync-meta">登录后，每次保存记录会自动上传；新设备先登录，再点“拉取云端”合并数据。</p>
+            </div>
+            <div class="device-link-box">
+              <div class="panel-head compact-head">
+                <div>
+                  <p class="eyebrow">手机联动</p>
+                  <h2>设备与数据入口</h2>
+                </div>
+              </div>
+              <div class="device-link-grid">
+                <article class="device-link-card is-ready">
+                  <span class="icon" data-icon="smartphone"></span>
+                  <div>
+                    <strong>手机网页</strong>
+                    <p>已支持登录记住、拍照记录和云同步。</p>
+                  </div>
+                </article>
+                <article class="device-link-card">
+                  <span class="icon" data-icon="watch"></span>
+                  <div>
+                    <strong>Apple Watch</strong>
+                    <p>导入 Apple 健康的 export.zip 或 export.xml，同步运动、睡眠、体重。</p>
+                  </div>
+                </article>
+                <article class="device-link-card">
+                  <span class="icon" data-icon="scale"></span>
+                  <div>
+                    <strong>电子秤</strong>
+                    <p>导入 CSV，同步体重、体脂；也支持从 Apple 健康里的体重记录导入。</p>
+                  </div>
+                </article>
+              </div>
+              <div class="device-import-panel">
+                <div class="device-import-copy">
+                  <strong>设备文件导入</strong>
+                  <p>支持 Apple 健康导出的 export.zip / export.xml，以及通用 CSV：date, weight, bodyFat, sleep, exerciseMinutes, exerciseKcal。</p>
+                </div>
+                <div class="device-import-actions">
+                  <label class="file-button">
+                    <span class="icon" data-icon="upload"></span>
+                    <span>选择设备文件</span>
+                    <input id="deviceImportFile" type="file" accept=".zip,.xml,.csv,application/zip,application/xml,text/xml,text/csv" />
+                  </label>
+                  <button id="downloadDeviceTemplate" class="ghost-button" type="button">
+                    <span class="icon" data-icon="download"></span>
+                    <span>CSV 模板</span>
+                  </button>
+                </div>
+                <p id="deviceImportStatus" class="save-status" aria-live="polite"></p>
+              </div>
+            </div>
+            <div class="note-panel">
+              <strong>安全边界</strong>
+              <p>这里的热量、运动消耗和建议都只是记录与估算；血糖、血压、用药和热量下限请按医生或营养师给你的目标执行。</p>
+            </div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <template id="entryTemplate">
+      <article class="entry-item">
+        <div>
+          <strong></strong>
+          <p></p>
+        </div>
+        <button class="delete-button" type="button" title="删除">
+          <span class="icon" data-icon="trash-2"></span>
+        </button>
+      </article>
+    </template>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

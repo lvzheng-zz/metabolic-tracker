@@ -1,0 +1,7 @@
+interface:
+  display_name: "Metabolic Health App Dev"
+  short_description: "Autonomously improve the personal metabolic tracker."
+  default_prompt: "Use $metabolic-health-app-dev to autonomously improve the personal metabolic tracker safely."
+
+policy:
+  allow_implicit_invocation: true
