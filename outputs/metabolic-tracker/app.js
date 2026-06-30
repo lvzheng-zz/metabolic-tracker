@@ -1,6 +1,6 @@
 const STORAGE_KEY = "metabolic-tracker-v1";
 const AUTH_STORAGE_KEY = "metabolic-tracker-auth-v1";
-const APP_VERSION = "2026-06-30-profile-page";
+const APP_VERSION = "2026-06-30-bear-app";
 
 const BUILTIN_FOODS = [
   { name: "米饭（熟）", kcal100: 116, protein100: 2.6, carbs100: 25.9, fat100: 0.3 },
@@ -37,6 +37,10 @@ const ACTIVITIES = [
   { name: "骑行", met: 6.8 },
   { name: "游泳", met: 6.0 },
   { name: "力量训练", met: 5.0 },
+  { name: "卧推", met: 4.5 },
+  { name: "深蹲", met: 5.5 },
+  { name: "硬拉", met: 5.5 },
+  { name: "羽毛球", met: 7.0 },
   { name: "椭圆机", met: 5.0 },
   { name: "跳绳", met: 10.0 },
   { name: "瑜伽", met: 2.5 },
@@ -219,6 +223,7 @@ let cloudSyncTimer = null;
 let authState = loadAuthState();
 let monthCursor = null;
 let chartAnimationToken = 0;
+let trendRangeDays = 7;
 const supplementReminderSent = new Set();
 
 function normalizeSupplementItems(items) {
@@ -706,7 +711,40 @@ function createIcon(name) {
 function setView(viewName) {
   $$(".tab").forEach((tab) => tab.classList.toggle("is-active", tab.dataset.view === viewName));
   $$(".view").forEach((view) => view.classList.toggle("is-active", view.id === viewName));
+  closeQuickActions();
   renderAll();
+}
+
+function toggleQuickActions() {
+  const sheet = $("#quickActionSheet");
+  const fab = $("#quickFab");
+  if (!sheet || !fab) return;
+  const nextHidden = !sheet.hidden;
+  sheet.hidden = nextHidden;
+  fab.setAttribute("aria-expanded", String(!nextHidden));
+}
+
+function closeQuickActions() {
+  const sheet = $("#quickActionSheet");
+  const fab = $("#quickFab");
+  if (!sheet || !fab) return;
+  sheet.hidden = true;
+  fab.setAttribute("aria-expanded", "false");
+}
+
+function jumpToRecord(viewName, options = {}) {
+  setView(viewName);
+  if (options.photo) $("#foodPhotoInput")?.click();
+  window.setTimeout(() => {
+    const target = options.focus || (viewName === "food" ? "#foodForm" : viewName === "exercise" ? "#exerciseForm" : viewName === "body" ? "#bodyForm" : "");
+    if (target) $(target)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, 80);
+}
+
+function handleQuickJump(button) {
+  const viewName = button.dataset.quickJump;
+  if (!viewName) return;
+  jumpToRecord(viewName, { photo: button.dataset.foodAction === "photo" });
 }
 
 function fillFoodDatalist() {
@@ -811,6 +849,8 @@ function closeCheckupModal() {
 function renderDashboard() {
   const date = activeDate();
   const summary = daySummary(date);
+  const targets = dailyTargets(date);
+  const supplements = supplementSummary(date);
   $("#budgetTitle").textContent = formatKcal(summary.budget);
   $("#todayFoodKcal").textContent = formatKcal(summary.food.kcal);
   $("#todayExerciseKcal").textContent = formatKcal(summary.exercise.credit);
@@ -823,6 +863,21 @@ function renderDashboard() {
   const ringColor = ratio > 1.05 ? "var(--rose)" : ratio > 0.9 ? "var(--amber)" : "var(--teal)";
   $("#balanceRing").style.setProperty("--balance-color", ringColor);
   $("#balanceRing").style.setProperty("--balance-progress", `${ringDegrees}deg`);
+
+  const moveTarget = 150;
+  const bearState = bearMoodForDay(summary, targets, supplements);
+  const stateCard = $("#bearStateCard");
+  if (stateCard) stateCard.dataset.bearMood = bearState.mood;
+  const moodTitle = $("#bearMoodTitle");
+  const moodText = $("#bearMoodText");
+  if (moodTitle) moodTitle.textContent = bearState.title;
+  if (moodText) moodText.textContent = bearState.text;
+  const proteinPill = $("#todayProteinPill");
+  const movePill = $("#todayMovePill");
+  const supplementPill = $("#todaySupplementPill");
+  if (proteinPill) proteinPill.textContent = `蛋白 ${round(summary.food.protein, 1)} / ${round(targets.protein, 1)}g`;
+  if (movePill) movePill.textContent = `运动 ${Math.round(summary.exercise.minutes)} / ${moveTarget}min`;
+  if (supplementPill) supplementPill.textContent = `补剂 ${supplements.done} / ${supplements.total}`;
 
   const latestWeight = currentWeight();
   $("#latestWeight").textContent = latestWeight ? formatUnit(latestWeight, "kg", 1) : "--";
@@ -841,78 +896,89 @@ function renderDashboard() {
   renderTodayTimeline(date);
 }
 
+function bearMoodForDay(summary, targets, supplements) {
+  if (summary.food.kcal === 0) {
+    return {
+      mood: "ready",
+      title: "小熊准备开工",
+      text: "今天还没饮食记录，先记早餐或午餐就好。"
+    };
+  }
+  if (summary.budget && summary.food.kcal > summary.budget * 1.05) {
+    return {
+      mood: "over",
+      title: "小熊摸摸肚子",
+      text: "今天有点多，下一餐清淡一点，明天不用极端补偿。"
+    };
+  }
+  if (targets.protein && summary.food.protein < targets.protein * 0.55) {
+    return {
+      mood: "protein",
+      title: "小熊想加点蛋白",
+      text: "优先补肉蛋奶豆，外卖先看主食、肉和饮料。"
+    };
+  }
+  if (summary.exercise.minutes >= 150 || supplements.done >= supplements.total && supplements.total > 0) {
+    return {
+      mood: "done",
+      title: "小熊打卡很稳",
+      text: "今天节奏不错，继续保持温暖、稳定、可坚持。"
+    };
+  }
+  if (summary.exercise.minutes >= 20) {
+    return {
+      mood: "move",
+      title: "小熊已经动起来",
+      text: "运动已记录，晚上按饥饿感微调摄入就好。"
+    };
+  }
+  return {
+    mood: "normal",
+    title: "小熊陪你稳住",
+    text: "今天有记录了，晚点补一次轻运动会更完整。"
+  };
+}
+
 function renderSuggestions(date) {
   const summary = daySummary(date);
-  const latest = getLatestBodyEntry();
+  const targets = dailyTargets(date);
+  const week = weekSummary(date);
   const suggestions = [];
-  const add = (type, title, text, icon = "info") => suggestions.push({ type, title, text, icon });
-
-  if (!latest && !currentWeight()) {
-    add("warn", "先补一条身体基线", "记录体重，或在个人中心填估算体重，后面的预算和趋势会更准。", "alert");
-  }
-
-  if (!bmrEstimate()) {
-    add("warn", "目标正在用手动值", "在设置里补齐性别、年龄、身高和体重后，系统会用公式估算基础目标。", "calculator");
-  }
+  const add = (type, title, text, face = "ʕ•ᴥ•ʔ") => suggestions.push({ type, title, text, face });
 
   if (summary.food.kcal === 0) {
-    add("info", "今天还没记饮食", "先从主食、肉蛋奶豆、烹调用油和饮品开始记，热量误差会小很多。", "utensils");
-  } else if (summary.budget !== null) {
-    if (summary.balance < -300) {
-      add("alert", "今天已超过预算", "不用靠明天极端少吃来补，优先把下一餐拉回清淡、足量蛋白和蔬菜。", "alert");
-    } else if (summary.balance > 500) {
-      add("warn", "剩余热量偏多", "如果不是医生安排的低热量日，长期摄入过低可能影响坚持和训练恢复。", "alert");
-    } else {
-      add("info", "今天节奏比较稳", "运动抵扣已按设置比例计入预算，晚上按饥饿感小幅调整就好。", "check");
-    }
+    add("info", "今天还没饮食记录", "先记早餐/午餐，不用一开始就追求特别精确。", "①");
+    add("info", "如果吃外卖", "优先记录主食、肉、饮料，油和酱料先用估算。", "②");
+  } else if (summary.budget && summary.food.kcal > summary.budget * 1.05) {
+    add("warn", "今天吃得有点多", "下一餐清淡一点、蛋白够一点，不需要明天极端少吃。", "①");
+  } else {
+    add("info", "今天已经开始记录", "继续把主食、蛋白和饮料补全，小熊就能更准地帮你看余量。", "①");
   }
 
-  const minIntake = toNumber(state.settings.minIntake);
-  if (minIntake && summary.food.kcal > 0 && summary.food.kcal < minIntake) {
-    add("warn", "低于最低摄入提醒", `你设置的提醒线是 ${minIntake} kcal；如果经常低于它，建议复核方案。`, "alert");
+  if (targets.protein && summary.food.protein < targets.protein * 0.75) {
+    add("warn", "蛋白还差一些", `今天蛋白约 ${round(summary.food.protein, 1)}g，先争取接近 ${Math.round(targets.protein * 0.8)}g。`, "②");
+  } else if (summary.food.kcal > 0) {
+    add("info", "蛋白节奏还可以", "晚餐继续优先肉蛋奶豆，主食按饥饿感微调。", "②");
   }
 
-  const trend = weightTrend();
-  if (trend && trend.weeklyRate < -1) {
-    add("warn", "体重下降偏快", "最近趋势超过每周体重 1% 的下降幅度，代谢异常人群更适合让医生确认节奏。", "alert");
+  if (week.minutes < 150) {
+    add("info", "晚上可以轻运动", "安排 20 分钟快走或骑车就够，先把频率做稳。", "③");
+  } else {
+    add("info", "本周运动达标中", "运动已经有基础了，记得留一点恢复空间。", "③");
   }
 
-  if (latest) {
-    const systolic = toNumber(latest.systolic);
-    const diastolic = toNumber(latest.diastolic);
-    const fastingGlucose = toNumber(latest.fastingGlucose);
-    const uricAcid = toNumber(latest.uricAcid);
-    const ldl = toNumber(latest.ldl);
-    const alt = toNumber(latest.alt);
-    if ((systolic && systolic >= 130) || (diastolic && diastolic >= 80)) {
-      add("warn", "血压建议持续复测", "体检血压偏高时，减脂期适合把家庭血压也记进身体记录，方便看趋势。", "alert");
-    }
-    if (fastingGlucose && fastingGlucose >= 5.6) {
-      add("warn", "血糖作为重点指标", "空腹血糖偏高时，优先盯住含糖饮料、精制主食份量和餐后活动。", "alert");
-    }
-    if (uricAcid && uricAcid > 420) {
-      add("warn", "尿酸作为复查指标", "尿酸偏高时，记录饮水、酒精、海鲜/内脏等触发因素会更有用。", "alert");
-    }
-    if ((ldl && ldl >= 3.4) || (alt && alt > 50)) {
-      add("warn", "血脂和肝功能要复查", "LDL 或 ALT 偏高时，减脂趋势、运动频率和复查时间可以一起跟踪。", "alert");
-    }
-  }
-
-  const week = weekSummary(date);
-  if (week.minutes > 0 && week.minutes < 150) {
-    add("info", "本周运动还可以加一点", `最近 7 天记录了 ${Math.round(week.minutes)} 分钟活动；先把频率做稳。`, "bike");
-  } else if (week.minutes >= 150) {
-    add("info", "本周活动量不错", `最近 7 天记录了 ${Math.round(week.minutes)} 分钟活动，注意保留恢复日。`, "check");
+  if (!currentWeight()) {
+    add("warn", "补一条体重基线", "记录一次体重后，运动消耗和趋势会更可靠。", "④");
   }
 
   const container = $("#suggestions");
   container.innerHTML = "";
-  suggestions.slice(0, 4).forEach((item) => {
+  suggestions.slice(0, 3).forEach((item) => {
     const card = document.createElement("div");
     card.className = `suggestion ${item.type}`;
     const badge = document.createElement("div");
     badge.className = "badge";
-    badge.append(createIcon(item.icon));
+    badge.textContent = item.face;
     const body = document.createElement("div");
     const title = document.createElement("strong");
     title.textContent = item.title;
@@ -1331,6 +1397,17 @@ function renderFoodView() {
   $("#foodTotalProtein").textContent = formatGramPair(totals.protein, targets.protein);
   $("#foodTotalCarbs").textContent = formatGramPair(totals.carbs, targets.carbs);
   $("#foodTotalFat").textContent = formatGramPair(totals.fat, targets.fat);
+  const plateKcal = $("#foodPlateKcal");
+  if (plateKcal) plateKcal.textContent = formatKcalPair(totals.kcal, targets.kcal);
+  const plateProtein = $("#foodPlateProtein");
+  const plateCarbs = $("#foodPlateCarbs");
+  const plateFat = $("#foodPlateFat");
+  if (plateProtein) plateProtein.textContent = `蛋白 ${round(totals.protein, 1)} / ${round(targets.protein, 1)}g`;
+  if (plateCarbs) plateCarbs.textContent = `碳水 ${round(totals.carbs, 1)} / ${round(targets.carbs, 1)}g`;
+  if (plateFat) plateFat.textContent = `脂肪 ${round(totals.fat, 1)} / ${round(targets.fat, 1)}g`;
+  setProgressBar("#foodProteinBar", totals.protein, targets.protein);
+  setProgressBar("#foodCarbsBar", totals.carbs, targets.carbs);
+  setProgressBar("#foodFatBar", totals.fat, targets.fat);
 
   const container = $("#foodEntries");
   container.innerHTML = "";
@@ -1354,6 +1431,71 @@ function renderFoodView() {
       )
     );
   });
+}
+
+function setProgressBar(selector, value, target) {
+  const bar = $(selector);
+  if (!bar) return;
+  const ratio = target ? Math.min((value || 0) / target, 1.25) : 0;
+  bar.style.width = `${Math.min(ratio * 100, 100)}%`;
+  bar.dataset.over = ratio > 1.05 ? "true" : "";
+}
+
+function fillFoodForm(entry) {
+  const form = $("#foodForm");
+  setFormValue(form, "date", activeDate());
+  setFormValue(form, "meal", entry.meal || "午餐");
+  setFormValue(form, "foodName", entry.foodName || "");
+  setFormValue(form, "grams", entry.grams || "");
+  setFormValue(form, "kcal100", entry.kcal100 || "");
+  setFormValue(form, "protein100", entry.protein100 || "");
+  setFormValue(form, "carbs100", entry.carbs100 || "");
+  setFormValue(form, "fat100", entry.fat100 || "");
+  setFormValue(form, "notes", entry.notes || "");
+}
+
+function handleFoodQuickAction(action) {
+  if (action === "photo") {
+    jumpToRecord("food", { photo: true });
+    return;
+  }
+  jumpToRecord("food", { focus: "#foodForm" });
+}
+
+function applyFoodPreset(name) {
+  const food = findFood(name);
+  if (!food) return;
+  fillFoodForm({
+    meal: "午餐",
+    foodName: food.name,
+    grams: food.name.includes("米饭") ? 150 : 100,
+    kcal100: food.kcal100,
+    protein100: food.protein100,
+    carbs100: food.carbs100,
+    fat100: food.fat100,
+    notes: "常用食物"
+  });
+  jumpToRecord("food", { focus: "#foodForm" });
+}
+
+function applyFoodTemplate(name) {
+  const templates = {
+    "盖饭": { grams: 650, kcal100: 165, protein100: 7.5, carbs100: 22, fat100: 5.5 },
+    "炒饭": { grams: 500, kcal100: 190, protein100: 6, carbs100: 28, fat100: 6 },
+    "炸鸡": { grams: 300, kcal100: 280, protein100: 18, carbs100: 14, fat100: 17 },
+    "汉堡": { grams: 260, kcal100: 240, protein100: 12, carbs100: 25, fat100: 11 },
+    "麻辣烫": { grams: 650, kcal100: 120, protein100: 7, carbs100: 12, fat100: 5 },
+    "奶茶": { grams: 500, kcal100: 90, protein100: 1, carbs100: 17, fat100: 2 }
+  };
+  const template = templates[name];
+  if (!template) return;
+  fillFoodForm({
+    meal: name === "奶茶" ? "饮品" : "午餐",
+    foodName: `${name}（外卖估算）`,
+    ...template,
+    notes: "外卖快捷估算，可按实际份量调整"
+  });
+  jumpToRecord("food", { focus: "#foodForm" });
 }
 
 function renderBodyView() {
@@ -1393,6 +1535,17 @@ function renderExerciseView() {
   $("#exerciseDayTitle").textContent = date;
   $("#exerciseTotalKcal").textContent = formatKcal(total.kcal);
   $("#exerciseCreditKcal").textContent = formatKcal(total.credit);
+  const title = $("#exerciseProgressTitle");
+  const text = $("#exerciseProgressText");
+  const hero = $("#exerciseHeroPanel");
+  if (title) title.textContent = `${Math.round(total.minutes)} / 150 min`;
+  if (text) {
+    if (total.minutes <= 0) text.textContent = "今天还没动，小熊还在沙发上。";
+    else if (total.minutes < 30) text.textContent = "小熊已经站起来了，再加一点就更稳。";
+    else if (total.minutes < 150) text.textContent = "今天运动有记录，本周目标继续慢慢补。";
+    else text.textContent = "运动完成，小熊骑车冲过终点线。";
+  }
+  if (hero) hero.dataset.exerciseMood = total.minutes >= 150 ? "done" : total.minutes > 0 ? "move" : "rest";
 
   const container = $("#exerciseEntries");
   container.innerHTML = "";
@@ -1419,6 +1572,28 @@ function renderTrendStats() {
   $("#weekMinutes").textContent = `${Math.round(week.minutes)} min`;
   $("#weekCredit").textContent = formatKcal(week.credit);
   $("#weekBalance").textContent = formatKcal(week.budget - week.food);
+  const bodyLabel = $("#bodyChartRangeLabel");
+  const calorieLabel = $("#calorieChartRangeLabel");
+  if (bodyLabel) bodyLabel.textContent = `${trendRangeDays} 天`;
+  if (calorieLabel) calorieLabel.textContent = `${trendRangeDays} 天`;
+  const coach = $("#weeklyCoachSummary");
+  if (coach) {
+    const proteinDays = rangeDays(activeDate(), 7).filter((date) => {
+      const totals = foodTotals(date);
+      const targets = dailyTargets(date);
+      return targets.protein && totals.protein >= targets.protein * 0.8;
+    }).length;
+    const moveDays = rangeDays(activeDate(), 7).filter((date) => exerciseTotals(date).minutes >= 20).length;
+    coach.textContent = `本周小熊总结：平均摄入 ${Math.round(week.food / week.days)} kcal，蛋白达标 ${proteinDays} / 7 天，运动完成 ${moveDays} / 7 天。`;
+  }
+  const trendCoach = $("#trendCoachText");
+  if (trendCoach) {
+    const recordedDays = rangeDays(activeDate(), trendRangeDays).filter((date) => hasDayRecord(date)).length;
+    trendCoach.textContent =
+      recordedDays >= 3
+        ? `最近 ${trendRangeDays} 天有 ${recordedDays} 天记录，小熊开始能看出一点节奏了。`
+        : "连续记录 3 天后，小熊会更容易看出节奏。";
+  }
 }
 
 function emptyState(text) {
@@ -1446,15 +1621,40 @@ function deleteEntry(type, id) {
   renderAll();
 }
 
-function estimateExerciseKcal() {
+function estimateExerciseKcal(options = {}) {
   const form = $("#exerciseForm");
   const activity = ACTIVITIES.find((item) => item.name === formValue(form, "type"));
   const minutes = toNumber(formValue(form, "minutes"));
-  const weight = currentWeight();
+  const weight = currentWeight() ?? (options.allowDefaultWeight ? 100 : null);
   if (!activity || !minutes || !weight) return null;
   const intensityMap = { easy: 0.82, normal: 1, hard: 1.18 };
   const met = activity.met * intensityMap[formValue(form, "intensity")];
   return Math.round(((met * 3.5 * weight) / 200) * minutes);
+}
+
+function applyExerciseTemplate(value) {
+  const [type, minutes, intensity] = String(value || "").split("|");
+  if (!type) return;
+  const form = $("#exerciseForm");
+  setFormValue(form, "date", activeDate());
+  setFormValue(form, "type", type === "自定义" ? "快走" : type);
+  setFormValue(form, "minutes", minutes || 30);
+  setFormValue(form, "intensity", intensity || "normal");
+  const usedDefaultWeight = !currentWeight();
+  const kcal = estimateExerciseKcal({ allowDefaultWeight: true });
+  if (kcal !== null) setFormValue(form, "kcal", kcal);
+  const note = usedDefaultWeight ? "快捷模板，按100kg临时估算；补体重后会更准" : "快捷模板";
+  setFormValue(form, "notes", type === "自定义" ? (usedDefaultWeight ? "按100kg临时估算；补体重后会更准" : "") : note);
+  jumpToRecord("exercise", { focus: "#exerciseForm" });
+}
+
+function setTrendRange(days) {
+  trendRangeDays = Number(days) || 7;
+  $$("[data-trend-range]").forEach((button) => {
+    button.classList.toggle("is-active", Number(button.dataset.trendRange) === trendRangeDays);
+  });
+  renderTrendStats();
+  renderChartsIfVisible();
 }
 
 function rememberCustomFood(entry) {
@@ -2982,7 +3182,7 @@ function canvasContext(canvas) {
   return { ctx, width, height };
 }
 
-function drawEmptyChart(ctx, width, height, text) {
+function drawEmptyChart(ctx, width, height, text, detail = "记录几天后这里会自动生成趋势") {
   ctx.clearRect(0, 0, width, height);
   ctx.fillStyle = "#fbfdf8";
   ctx.fillRect(0, 0, width, height);
@@ -2993,10 +3193,10 @@ function drawEmptyChart(ctx, width, height, text) {
   ctx.fillStyle = "#0f766e";
   ctx.font = '700 14px "Microsoft YaHei", sans-serif';
   ctx.textAlign = "center";
-  ctx.fillText(text, width / 2, height / 2 - 6);
+  ctx.fillText("ʕ·ᴥ·ʔ  " + text, width / 2, height / 2 - 6);
   ctx.fillStyle = "#65717f";
   ctx.font = '12px "Microsoft YaHei", sans-serif';
-  ctx.fillText("记录几天后这里会自动生成趋势", width / 2, height / 2 + 18);
+  ctx.fillText(detail, width / 2, height / 2 + 18);
 }
 
 function drawBodyChart(progress = 1) {
@@ -3005,9 +3205,9 @@ function drawBodyChart(progress = 1) {
   const entries = [...state.bodyEntries]
     .filter((entry) => toNumber(entry.weight) !== null || toNumber(entry.waist) !== null)
     .sort((a, b) => a.date.localeCompare(b.date))
-    .slice(-30);
+    .slice(-trendRangeDays);
   if (!entries.length) {
-    drawEmptyChart(ctx, width, height, "暂无身体趋势");
+    drawEmptyChart(ctx, width, height, "还没有趋势", "连续记录 3 天后，小熊会帮你看变化");
     return;
   }
 
@@ -3098,10 +3298,10 @@ function drawLine(ctx, entries, key, scaleX, scaleY, color, progress = 1) {
 function drawCalorieChart(progress = 1) {
   const canvas = $("#calorieChart");
   const { ctx, width, height } = canvasContext(canvas);
-  const days = rangeDays(activeDate(), 14);
+  const days = rangeDays(activeDate(), trendRangeDays);
   const data = days.map((date) => ({ date, ...daySummary(date) }));
   if (!data.some((day) => day.food.kcal > 0 || day.exercise.kcal > 0)) {
-    drawEmptyChart(ctx, width, height, "暂无摄入与运动记录");
+    drawEmptyChart(ctx, width, height, "还没有趋势", "先记几餐，小熊会帮你看摄入和预算");
     return;
   }
 
@@ -3186,6 +3386,20 @@ function bindEvents() {
     tab.addEventListener("click", () => setView(tab.dataset.view));
   });
 
+  $("#quickFab")?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    toggleQuickActions();
+  });
+  $("#quickActionSheet")?.addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-quick-jump]");
+    if (!button) return;
+    event.stopPropagation();
+    handleQuickJump(button);
+  });
+  document.addEventListener("click", (event) => {
+    if (!event.target.closest(".quick-fab-wrap")) closeQuickActions();
+  });
+
   $("#profileButton").addEventListener("click", openProfileCenter);
   $("#checkupButton").addEventListener("click", openCheckupModal);
   $("#checkupClose").addEventListener("click", closeCheckupModal);
@@ -3193,11 +3407,42 @@ function bindEvents() {
     if (event.target === event.currentTarget) closeCheckupModal();
   });
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && !$("#checkupModal").hidden) closeCheckupModal();
+    if (event.key !== "Escape") return;
+    closeQuickActions();
+    if (!$("#checkupModal").hidden) closeCheckupModal();
   });
 
   $$("[data-jump]").forEach((button) => {
     button.addEventListener("click", () => setView(button.dataset.jump));
+  });
+  $$(".quick-record-button[data-quick-jump]").forEach((button) => {
+    button.addEventListener("click", () => handleQuickJump(button));
+  });
+  $(".food-quick-panel")?.addEventListener("click", (event) => {
+    const actionButton = event.target.closest("[data-food-action]");
+    if (actionButton) {
+      handleFoodQuickAction(actionButton.dataset.foodAction);
+      return;
+    }
+    const presetButton = event.target.closest("[data-food-preset]");
+    if (presetButton) {
+      applyFoodPreset(presetButton.dataset.foodPreset);
+      return;
+    }
+    const templateButton = event.target.closest("[data-food-template]");
+    if (templateButton) {
+      applyFoodTemplate(templateButton.dataset.foodTemplate);
+    }
+  });
+  $(".exercise-template-grid")?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-exercise-template]");
+    if (!button) return;
+    applyExerciseTemplate(button.dataset.exerciseTemplate);
+  });
+  $(".trend-range-tabs")?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-trend-range]");
+    if (!button) return;
+    setTrendRange(button.dataset.trendRange);
   });
 
   $("#activeDate").addEventListener("change", () => {

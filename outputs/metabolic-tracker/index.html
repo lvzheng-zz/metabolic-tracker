@@ -7,7 +7,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="减脂记录" />
     <title>代谢减脂记录</title>
-    <link rel="stylesheet" href="./styles.css?v=20260630-profile-page" />
+    <link rel="stylesheet" href="./styles.css?v=20260630-bear-app" />
   </head>
   <body>
     <div class="app-shell">
@@ -39,15 +39,11 @@
       <nav class="tabs" aria-label="主要视图">
         <button class="tab is-active" type="button" data-view="dashboard">
           <span class="icon" data-icon="layout-dashboard"></span>
-          <span>总览</span>
+          <span>今日</span>
         </button>
         <button class="tab" type="button" data-view="food">
           <span class="icon" data-icon="utensils"></span>
           <span>饮食</span>
-        </button>
-        <button class="tab" type="button" data-view="body">
-          <span class="icon" data-icon="ruler"></span>
-          <span>身体</span>
         </button>
         <button class="tab" type="button" data-view="exercise">
           <span class="icon" data-icon="bike"></span>
@@ -59,49 +55,80 @@
         </button>
         <button class="tab" type="button" data-view="profile">
           <span class="icon" data-icon="user"></span>
-          <span>个人</span>
+          <span>我的</span>
         </button>
       </nav>
+
+      <div class="quick-fab-wrap">
+        <button id="quickFab" class="quick-fab" type="button" aria-expanded="false" aria-controls="quickActionSheet" title="快捷记录">
+          <span class="icon" data-icon="plus"></span>
+        </button>
+        <div id="quickActionSheet" class="quick-action-sheet" hidden>
+          <button type="button" data-quick-jump="food">
+            <span class="icon" data-icon="utensils"></span>
+            <span>记一餐</span>
+          </button>
+          <button type="button" data-quick-jump="body">
+            <span class="icon" data-icon="scale"></span>
+            <span>记体重</span>
+          </button>
+          <button type="button" data-quick-jump="exercise">
+            <span class="icon" data-icon="bike"></span>
+            <span>记运动</span>
+          </button>
+          <button type="button" data-quick-jump="body">
+            <span class="icon" data-icon="pill"></span>
+            <span>打卡补剂</span>
+          </button>
+          <button type="button" data-quick-jump="food" data-food-action="photo">
+            <span class="icon" data-icon="camera"></span>
+            <span>拍照识别</span>
+          </button>
+        </div>
+      </div>
 
       <main>
         <section id="dashboard" class="view is-active">
           <div class="dashboard-grid">
-            <section class="panel hero-panel">
-              <div class="panel-head">
-                <div>
-                  <p class="eyebrow">今日预算</p>
-                  <h2 id="budgetTitle">-- kcal</h2>
-                </div>
-                <div class="balance-ring" id="balanceRing" aria-label="今日热量余量">
+            <section class="panel hero-panel bear-state-card" id="bearStateCard" data-bear-mood="ready">
+              <div class="bear-state-copy">
+                <p class="eyebrow">今日小熊状态</p>
+                <h2 id="bearMoodTitle">准备开始新的一天</h2>
+                <p id="bearMoodText">先记一餐，小熊就能帮你看今天怎么调整。</p>
+              </div>
+              <div class="bear-state-main">
+                <div class="balance-ring bear-balance-ring" id="balanceRing" aria-label="今日热量余量">
                   <span id="balanceValue">--</span>
-                  <small>剩余</small>
+                  <small>剩余 kcal</small>
+                </div>
+                <div class="hero-companion" aria-hidden="true">
+                  <div class="bear-mascot">
+                    <svg viewBox="0 0 160 140" role="img">
+                      <ellipse class="bear-shadow" cx="82" cy="124" rx="52" ry="10"></ellipse>
+                      <circle class="bear-ear" cx="47" cy="40" r="22"></circle>
+                      <circle class="bear-ear" cx="113" cy="40" r="22"></circle>
+                      <circle class="bear-face" cx="80" cy="70" r="48"></circle>
+                      <circle class="bear-cheek" cx="51" cy="78" r="10"></circle>
+                      <circle class="bear-cheek" cx="109" cy="78" r="10"></circle>
+                      <circle class="bear-eye" cx="65" cy="61" r="4"></circle>
+                      <circle class="bear-eye" cx="95" cy="61" r="4"></circle>
+                      <ellipse class="bear-muzzle" cx="80" cy="82" rx="19" ry="15"></ellipse>
+                      <circle class="bear-nose" cx="80" cy="76" r="5"></circle>
+                      <path class="bear-smile" d="M72 84 Q80 92 88 84"></path>
+                      <path class="bear-mouth-over" d="M72 87 Q80 80 88 87"></path>
+                      <path class="bear-arm bear-arm-left" d="M34 84 Q18 92 20 110"></path>
+                      <path class="bear-arm bear-arm-right" d="M126 84 Q144 90 140 108"></path>
+                      <path class="bear-badge" d="M56 104 H104 Q111 104 111 111 V117 Q111 124 104 124 H56 Q49 124 49 117 V111 Q49 104 56 104Z"></path>
+                      <path class="bear-badge-line" d="M61 114 H99"></path>
+                    </svg>
+                  </div>
                 </div>
               </div>
-              <div class="hero-companion" aria-hidden="true">
-                <div class="bear-mascot">
-                  <svg viewBox="0 0 160 140" role="img">
-                    <ellipse class="bear-shadow" cx="82" cy="124" rx="52" ry="10"></ellipse>
-                    <circle class="bear-ear" cx="47" cy="40" r="22"></circle>
-                    <circle class="bear-ear" cx="113" cy="40" r="22"></circle>
-                    <circle class="bear-face" cx="80" cy="70" r="48"></circle>
-                    <circle class="bear-cheek" cx="51" cy="78" r="10"></circle>
-                    <circle class="bear-cheek" cx="109" cy="78" r="10"></circle>
-                    <circle class="bear-eye" cx="65" cy="61" r="4"></circle>
-                    <circle class="bear-eye" cx="95" cy="61" r="4"></circle>
-                    <ellipse class="bear-muzzle" cx="80" cy="82" rx="19" ry="15"></ellipse>
-                    <circle class="bear-nose" cx="80" cy="76" r="5"></circle>
-                    <path class="bear-smile" d="M72 84 Q80 92 88 84"></path>
-                    <path class="bear-arm bear-arm-left" d="M34 84 Q18 92 20 110"></path>
-                    <path class="bear-arm bear-arm-right" d="M126 84 Q144 90 140 108"></path>
-                    <path class="bear-badge" d="M56 104 H104 Q111 104 111 111 V117 Q111 124 104 124 H56 Q49 124 49 117 V111 Q49 104 56 104Z"></path>
-                    <path class="bear-badge-line" d="M61 114 H99"></path>
-                  </svg>
+              <div class="today-core-grid">
+                <div>
+                  <span>今日预算</span>
+                  <strong id="budgetTitle">-- kcal</strong>
                 </div>
-              </div>
-              <div class="meter" aria-hidden="true">
-                <div id="calorieMeter"></div>
-              </div>
-              <div class="stats-row">
                 <div>
                   <span>已摄入</span>
                   <strong id="todayFoodKcal">--</strong>
@@ -114,6 +141,45 @@
                   <span>净摄入</span>
                   <strong id="todayNetKcal">--</strong>
                 </div>
+              </div>
+              <div class="meter" aria-hidden="true">
+                <div id="calorieMeter"></div>
+              </div>
+              <div class="today-pill-row">
+                <span id="todayProteinPill">蛋白 -- / --</span>
+                <span id="todayMovePill">运动 -- / 150min</span>
+                <span id="todaySupplementPill">补剂 -- / --</span>
+              </div>
+            </section>
+
+            <section class="panel quick-record-panel">
+              <div class="panel-head compact-head">
+                <div>
+                  <p class="eyebrow">快捷记录</p>
+                  <h2>今天先做哪一步？</h2>
+                </div>
+              </div>
+              <div class="quick-record-grid">
+                <button class="quick-record-button" type="button" data-quick-jump="food">
+                  <span class="icon" data-icon="utensils"></span>
+                  <strong>记饮食</strong>
+                  <small>拍照或手动</small>
+                </button>
+                <button class="quick-record-button" type="button" data-quick-jump="body">
+                  <span class="icon" data-icon="scale"></span>
+                  <strong>记体重</strong>
+                  <small>睡眠/用药一起记</small>
+                </button>
+                <button class="quick-record-button" type="button" data-quick-jump="exercise">
+                  <span class="icon" data-icon="bike"></span>
+                  <strong>记运动</strong>
+                  <small>快走/骑车/力量</small>
+                </button>
+                <button class="quick-record-button" type="button" data-quick-jump="body">
+                  <span class="icon" data-icon="pill"></span>
+                  <strong>打卡补剂</strong>
+                  <small>今日用药补剂</small>
+                </button>
               </div>
             </section>
 
@@ -223,17 +289,17 @@
               <div id="dashboardSupplementList" class="supplement-mini-list"></div>
             </section>
 
-            <section class="panel">
+            <section class="panel coach-panel">
               <div class="panel-head">
                 <div>
-                  <p class="eyebrow">联动建议</p>
-                  <h2>今天怎么调</h2>
+                  <p class="eyebrow">小熊建议</p>
+                  <h2>今天可以这样做</h2>
                 </div>
               </div>
               <div id="suggestions" class="suggestion-list"></div>
             </section>
 
-            <section class="panel">
+            <section class="panel latest-body-panel">
               <div class="panel-head">
                 <div>
                   <p class="eyebrow">身体状态</p>
@@ -264,7 +330,7 @@
               </div>
             </section>
 
-            <section class="panel">
+            <section class="panel today-detail-panel">
               <div class="panel-head">
                 <div>
                   <p class="eyebrow">今日明细</p>
@@ -277,6 +343,74 @@
         </section>
 
         <section id="food" class="view">
+          <section class="panel food-plate-panel">
+            <div class="food-plate-copy">
+              <p class="eyebrow">今日餐盘</p>
+              <h2 id="foodPlateKcal">0 / 1800 kcal</h2>
+              <p>小熊先看总热量，再帮你补蛋白、控饮料和外卖。</p>
+            </div>
+            <div class="food-plate-bear" aria-hidden="true">
+              <div class="mini-bear-face">ʕ·ᴥ·ʔ</div>
+              <span>今天吃什么？</span>
+            </div>
+            <div class="food-macro-bars">
+              <div>
+                <span id="foodPlateProtein">蛋白 -- / --</span>
+                <i><b id="foodProteinBar"></b></i>
+              </div>
+              <div>
+                <span id="foodPlateCarbs">碳水 -- / --</span>
+                <i><b id="foodCarbsBar"></b></i>
+              </div>
+              <div>
+                <span id="foodPlateFat">脂肪 -- / --</span>
+                <i><b id="foodFatBar"></b></i>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel food-quick-panel">
+            <div class="panel-head compact-head">
+              <div>
+                <p class="eyebrow">快速记录</p>
+                <h2>少填一点，先记起来</h2>
+              </div>
+            </div>
+            <div class="food-quick-actions">
+              <button class="food-action-button" type="button" data-food-action="photo">
+                <span class="icon" data-icon="camera"></span>
+                <strong>拍照识别</strong>
+              </button>
+              <button class="food-action-button" type="button" data-food-action="ai">
+                <span class="icon" data-icon="sparkles"></span>
+                <strong>AI 估算</strong>
+              </button>
+              <button class="food-action-button" type="button" data-food-action="manual">
+                <span class="icon" data-icon="plus"></span>
+                <strong>手动添加</strong>
+              </button>
+            </div>
+            <div class="food-chip-groups">
+              <div class="food-chip-group">
+                <strong>常用食物</strong>
+                <button class="food-chip" type="button" data-food-preset="米饭（熟）">米饭</button>
+                <button class="food-chip" type="button" data-food-preset="鸡蛋">鸡蛋</button>
+                <button class="food-chip" type="button" data-food-preset="鸡胸肉（熟）">鸡胸肉</button>
+                <button class="food-chip" type="button" data-food-preset="纯牛奶">牛奶</button>
+                <button class="food-chip" type="button" data-food-preset="无糖酸奶">酸奶</button>
+              </div>
+              <div class="food-chip-group">
+                <strong>外卖快捷估算</strong>
+                <button class="food-chip" type="button" data-food-template="盖饭">盖饭</button>
+                <button class="food-chip" type="button" data-food-template="炒饭">炒饭</button>
+                <button class="food-chip" type="button" data-food-template="炸鸡">炸鸡</button>
+                <button class="food-chip" type="button" data-food-template="汉堡">汉堡</button>
+                <button class="food-chip" type="button" data-food-template="麻辣烫">麻辣烫</button>
+                <button class="food-chip" type="button" data-food-template="奶茶">奶茶</button>
+              </div>
+            </div>
+          </section>
+
           <div class="two-column">
             <section class="panel">
               <div class="panel-head">
@@ -622,6 +756,26 @@
         </section>
 
         <section id="exercise" class="view">
+          <section class="panel exercise-hero-panel" id="exerciseHeroPanel">
+            <div>
+              <p class="eyebrow">今日运动</p>
+              <h2 id="exerciseProgressTitle">0 / 150 min</h2>
+              <p id="exerciseProgressText">今天还没动，小熊还在沙发上。</p>
+            </div>
+            <div class="exercise-bear" aria-hidden="true">
+              <span>ʕง•ᴥ•ʔง</span>
+            </div>
+            <div class="exercise-template-grid">
+              <button class="exercise-template-button" type="button" data-exercise-template="快走|20|easy">快走 20min</button>
+              <button class="exercise-template-button" type="button" data-exercise-template="骑行|30|normal">骑车 30min</button>
+              <button class="exercise-template-button" type="button" data-exercise-template="力量训练|45|normal">力量训练 45min</button>
+              <button class="exercise-template-button" type="button" data-exercise-template="羽毛球|60|hard">羽毛球 60min</button>
+              <button class="exercise-template-button" type="button" data-exercise-template="卧推|45|normal">卧推</button>
+              <button class="exercise-template-button" type="button" data-exercise-template="深蹲|45|hard">深蹲</button>
+              <button class="exercise-template-button" type="button" data-exercise-template="硬拉|45|hard">硬拉</button>
+              <button class="exercise-template-button" type="button" data-exercise-template="自定义|30|normal">自定义</button>
+            </div>
+          </section>
           <div class="two-column">
             <section class="panel">
               <div class="panel-head">
@@ -697,11 +851,24 @@
         </section>
 
         <section id="trends" class="view">
+          <section class="panel trend-hero-panel">
+            <div>
+              <p class="eyebrow">趋势观察</p>
+              <h2>小熊拿着望远镜看变化</h2>
+              <p id="trendCoachText">连续记录 3 天后，小熊会更容易看出节奏。</p>
+            </div>
+            <div class="trend-range-tabs" aria-label="趋势时间范围">
+              <button class="is-active" type="button" data-trend-range="7">7天</button>
+              <button type="button" data-trend-range="14">14天</button>
+              <button type="button" data-trend-range="30">30天</button>
+              <button type="button" data-trend-range="90">90天</button>
+            </div>
+          </section>
           <div class="trend-grid">
             <section class="panel">
               <div class="panel-head">
                 <div>
-                  <p class="eyebrow">30 天</p>
+                  <p class="eyebrow" id="bodyChartRangeLabel">30 天</p>
                   <h2>体重与腰围</h2>
                 </div>
               </div>
@@ -710,7 +877,7 @@
             <section class="panel">
               <div class="panel-head">
                 <div>
-                  <p class="eyebrow">14 天</p>
+                  <p class="eyebrow" id="calorieChartRangeLabel">14 天</p>
                   <h2>摄入与预算</h2>
                 </div>
               </div>
@@ -741,6 +908,7 @@
                   <strong id="weekBalance">--</strong>
                 </div>
               </div>
+              <p id="weeklyCoachSummary" class="weekly-coach-summary">记录几天后，小熊会给你一段本周总结。</p>
             </section>
           </div>
         </section>
@@ -1005,6 +1173,6 @@
       </article>
     </template>
 
-    <script src="./app.js?v=20260630-profile-page"></script>
+    <script src="./app.js?v=20260630-bear-app"></script>
   </body>
 </html>
