@@ -6,7 +6,7 @@ const DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1";
 const DEFAULT_DASHSCOPE_MODEL = "qwen-vl-plus";
 const DEFAULT_DASHSCOPE_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1";
 const DEFAULT_DASHSCOPE_REGION = "cn-beijing";
-const RECOGNIZE_FOOD_VERSION = "2026-06-30-ai-json-repair";
+const RECOGNIZE_FOOD_VERSION = "2026-06-30-multi-food-parse";
 
 const foodResultSchema = {
   type: "object",
@@ -34,6 +34,75 @@ const foodResultSchema = {
   },
   required: ["items"]
 };
+
+const FOOD_COLLECTION_KEYS = [
+  "items",
+  "foods",
+  "foodItems",
+  "food_items",
+  "recognizedFoods",
+  "recognized_foods",
+  "dishes",
+  "dishItems",
+  "results",
+  "result",
+  "data",
+  "records",
+  "meals",
+  "\u83dc\u54c1",
+  "\u83dc\u54c1\u5217\u8868",
+  "\u98df\u7269",
+  "\u98df\u7269\u5217\u8868",
+  "\u8bc6\u522b\u7ed3\u679c",
+  "\u7ed3\u679c",
+  "\u660e\u7ec6"
+];
+const FOOD_NAME_KEYS = [
+  "foodName",
+  "name",
+  "food",
+  "dishName",
+  "title",
+  "item",
+  "\u98df\u7269\u540d\u79f0",
+  "\u83dc\u54c1\u540d\u79f0",
+  "\u540d\u79f0",
+  "\u83dc\u540d",
+  "\u98df\u6750",
+  "\u83dc\u54c1"
+];
+const MEAL_KEYS = ["meal", "\u9910\u6b21"];
+const GRAM_KEYS = [
+  "grams",
+  "weightGrams",
+  "weight_g",
+  "weight",
+  "amountGrams",
+  "portionGrams",
+  "estimatedGrams",
+  "servingGrams",
+  "\u91cd\u91cf",
+  "\u91cd\u91cfg",
+  "\u514b\u6570",
+  "\u4efd\u91cf",
+  "\u4f30\u8ba1\u91cd\u91cf",
+  "\u4f30\u7b97\u91cd\u91cf"
+];
+const TOTAL_KCAL_KEYS = ["kcal", "calories", "totalKcal", "totalCalories", "energy", "\u70ed\u91cf", "\u603b\u70ed\u91cf", "\u5361\u8def\u91cc"];
+const KCAL100_KEYS = [
+  "kcal100",
+  "caloriesPer100g",
+  "kcal_per_100g",
+  "energyPer100g",
+  "\u70ed\u91cf/100g",
+  "\u6bcf100g\u70ed\u91cf",
+  "\u6bcf100\u514b\u70ed\u91cf"
+];
+const PROTEIN100_KEYS = ["protein100", "proteinPer100g", "protein_per_100g", "\u86cb\u767d/100g", "\u6bcf100g\u86cb\u767d", "\u86cb\u767d\u8d28"];
+const CARBS100_KEYS = ["carbs100", "carbsPer100g", "carbs_per_100g", "carbohydrate100", "\u78b3\u6c34/100g", "\u6bcf100g\u78b3\u6c34", "\u78b3\u6c34\u5316\u5408\u7269"];
+const FAT100_KEYS = ["fat100", "fatPer100g", "fat_per_100g", "\u8102\u80aa/100g", "\u6bcf100g\u8102\u80aa", "\u8102\u80aa"];
+const NOTE_KEYS = ["notes", "note", "remark", "uncertainty", "\u5907\u6ce8", "\u8bf4\u660e", "\u4e0d\u786e\u5b9a\u6027"];
+const NUTRITION_KEYS = ["nutrition", "nutrients", "macros", "macro", "\u8425\u517b", "\u8425\u517b\u6210\u5206"];
 
 export default async function handler(req, res) {
   setCorsHeaders(res);
@@ -449,11 +518,16 @@ function salvageItemsFromJsonLikeText(text) {
 }
 
 function extractItemsArrayText(text) {
-  const match = /"?items"?\s*:\s*\[/i.exec(text);
+  const keyPattern = FOOD_COLLECTION_KEYS.map(escapeRegExp).join("|");
+  const match = new RegExp(`"?(${keyPattern})"?\\s*:\\s*\\[`, "i").exec(text);
   if (!match) return "";
   const start = match.index + match[0].lastIndexOf("[");
   const end = findMatchingBracket(text, start, "[", "]");
   return end > start ? text.slice(start, end + 1) : "";
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function extractTopLevelArrayText(text) {
@@ -539,34 +613,67 @@ function tryParseJsonObject(text) {
 }
 
 function normalizeParsedObject(value) {
-  if (!value || typeof value !== "object") return { items: [] };
-  if (Array.isArray(value.items)) return value;
-  if (Array.isArray(value.foods)) return { items: value.foods };
-  return { items: [] };
+  return { items: collectFoodItems(value) };
+}
+
+function collectFoodItems(value, depth = 0) {
+  if (!value || depth > 5) return [];
+  if (Array.isArray(value)) return value.flatMap((item) => collectFoodItems(item, depth + 1));
+  if (typeof value !== "object") return [];
+  if (looksLikeFoodItem(value)) return [value];
+
+  const direct = FOOD_COLLECTION_KEYS.flatMap((key) => collectFoodItems(value[key], depth + 1));
+  if (direct.length) return direct;
+
+  return Object.values(value)
+    .filter((item) => item && typeof item === "object")
+    .flatMap((item) => collectFoodItems(item, depth + 1));
+}
+
+function looksLikeFoodItem(value) {
+  return pickField(value, FOOD_NAME_KEYS) !== undefined && pickFoodValue(value, [...GRAM_KEYS, ...TOTAL_KCAL_KEYS, ...KCAL100_KEYS]) !== undefined;
 }
 
 function sanitizeItems(items) {
-  if (!Array.isArray(items)) return [];
-  return items
+  return collectFoodItems(items)
     .map((item) => {
-      const grams = clampNumber(item.grams ?? item.weightGrams ?? item.weight_g, 1, 3000, 100);
-      const totalKcal = optionalNumber(item.kcal ?? item.calories ?? item.totalKcal);
+      const grams = clampNumber(pickFoodValue(item, GRAM_KEYS), 1, 3000, 100);
+      const totalKcal = optionalNumber(pickFoodValue(item, TOTAL_KCAL_KEYS));
       const kcal100 =
-        optionalNumber(item.kcal100 ?? item.caloriesPer100g ?? item.kcal_per_100g) ??
+        optionalNumber(pickFoodValue(item, KCAL100_KEYS)) ??
         (totalKcal !== null && grams ? (totalKcal / grams) * 100 : 0);
 
       return {
-        meal: sanitizeMeal(item.meal),
-        foodName: sanitizeText(item.foodName || item.name || item.food, 40),
+        meal: sanitizeMeal(pickFoodValue(item, MEAL_KEYS)),
+        foodName: sanitizeText(pickFoodValue(item, FOOD_NAME_KEYS), 40),
         grams: Math.round(grams),
         kcal100: clampNumber(kcal100, 0, 900, 0),
-        protein100: clampNumber(item.protein100 ?? item.proteinPer100g ?? item.protein_per_100g, 0, 100, 0),
-        carbs100: clampNumber(item.carbs100 ?? item.carbsPer100g ?? item.carbs_per_100g, 0, 100, 0),
-        fat100: clampNumber(item.fat100 ?? item.fatPer100g ?? item.fat_per_100g, 0, 100, 0),
-        notes: sanitizeText(item.notes || item.note, 80) || "AI估算"
+        protein100: clampNumber(pickFoodValue(item, PROTEIN100_KEYS), 0, 100, 0),
+        carbs100: clampNumber(pickFoodValue(item, CARBS100_KEYS), 0, 100, 0),
+        fat100: clampNumber(pickFoodValue(item, FAT100_KEYS), 0, 100, 0),
+        notes: sanitizeText(pickFoodValue(item, NOTE_KEYS), 80) || "AI估算"
       };
     })
     .filter((item) => item.foodName && item.grams > 0);
+}
+
+function pickFoodValue(item, keys) {
+  const direct = pickField(item, keys);
+  if (direct !== undefined) return direct;
+  return pickField(nestedNutrition(item), keys);
+}
+
+function pickField(item, keys) {
+  if (!item || typeof item !== "object") return undefined;
+  for (const key of keys) {
+    if (item[key] !== undefined && item[key] !== null && item[key] !== "") return item[key];
+  }
+  return undefined;
+}
+
+function nestedNutrition(item) {
+  const value = pickField(item, NUTRITION_KEYS);
+  return value && typeof value === "object" ? value : null;
 }
 
 function sanitizeMeal(value) {
@@ -587,7 +694,14 @@ function clampNumber(value, min, max, fallback = min) {
 }
 
 function optionalNumber(value) {
-  const number = Number(value);
+  if (value === null || value === undefined || value === "") return null;
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  const text = String(value).replace(/,/g, "").trim();
+  const direct = Number(text);
+  if (Number.isFinite(direct)) return direct;
+  const match = text.match(/-?\d+(?:\.\d+)?/);
+  if (!match) return null;
+  const number = Number(match[0]);
   return Number.isFinite(number) ? number : null;
 }
 

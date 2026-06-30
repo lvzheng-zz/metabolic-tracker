@@ -1,6 +1,6 @@
 const STORAGE_KEY = "metabolic-tracker-v1";
 const AUTH_STORAGE_KEY = "metabolic-tracker-auth-v1";
-const APP_VERSION = "2026-06-30-ai-json-repair";
+const APP_VERSION = "2026-06-30-multi-food-parse";
 
 const BUILTIN_FOODS = [
   { name: "米饭（熟）", kcal100: 116, protein100: 2.6, carbs100: 25.9, fat100: 0.3 },
@@ -1578,9 +1578,59 @@ function clearFoodPhoto() {
   setFoodAiStatus("");
 }
 
+const AI_COLLECTION_KEYS = [
+  "items",
+  "foods",
+  "foodItems",
+  "food_items",
+  "recognizedFoods",
+  "recognized_foods",
+  "dishes",
+  "dishItems",
+  "results",
+  "result",
+  "data",
+  "records",
+  "meals",
+  "\u83dc\u54c1",
+  "\u83dc\u54c1\u5217\u8868",
+  "\u98df\u7269",
+  "\u98df\u7269\u5217\u8868",
+  "\u8bc6\u522b\u7ed3\u679c",
+  "\u7ed3\u679c",
+  "\u660e\u7ec6"
+];
+const AI_FOOD_NAME_KEYS = [
+  "foodName",
+  "name",
+  "food",
+  "dishName",
+  "title",
+  "item",
+  "\u98df\u7269\u540d\u79f0",
+  "\u83dc\u54c1\u540d\u79f0",
+  "\u540d\u79f0",
+  "\u83dc\u540d",
+  "\u98df\u6750",
+  "\u83dc\u54c1"
+];
+const AI_MEAL_KEYS = ["meal", "\u9910\u6b21"];
+const AI_GRAM_KEYS = ["grams", "weightGrams", "weight_g", "weight", "amountGrams", "portionGrams", "estimatedGrams", "servingGrams", "\u91cd\u91cf", "\u91cd\u91cfg", "\u514b\u6570", "\u4efd\u91cf", "\u4f30\u8ba1\u91cd\u91cf", "\u4f30\u7b97\u91cd\u91cf"];
+const AI_TOTAL_KCAL_KEYS = ["kcal", "calories", "totalKcal", "totalCalories", "energy", "\u70ed\u91cf", "\u603b\u70ed\u91cf", "\u5361\u8def\u91cc"];
+const AI_KCAL100_KEYS = ["kcal100", "caloriesPer100g", "kcal_per_100g", "energyPer100g", "\u70ed\u91cf/100g", "\u6bcf100g\u70ed\u91cf", "\u6bcf100\u514b\u70ed\u91cf"];
+const AI_PROTEIN100_KEYS = ["protein100", "proteinPer100g", "protein_per_100g", "\u86cb\u767d/100g", "\u6bcf100g\u86cb\u767d", "\u86cb\u767d\u8d28"];
+const AI_CARBS100_KEYS = ["carbs100", "carbsPer100g", "carbs_per_100g", "carbohydrate100", "\u78b3\u6c34/100g", "\u6bcf100g\u78b3\u6c34", "\u78b3\u6c34\u5316\u5408\u7269"];
+const AI_FAT100_KEYS = ["fat100", "fatPer100g", "fat_per_100g", "\u8102\u80aa/100g", "\u6bcf100g\u8102\u80aa", "\u8102\u80aa"];
+const AI_NOTE_KEYS = ["notes", "note", "remark", "uncertainty", "\u5907\u6ce8", "\u8bf4\u660e", "\u4e0d\u786e\u5b9a\u6027"];
+const AI_NUTRITION_KEYS = ["nutrition", "nutrients", "macros", "macro", "\u8425\u517b", "\u8425\u517b\u6210\u5206"];
+
 function numberFromAi(value, fallback = 0) {
   const number = toNumber(value);
-  return number === null ? fallback : Math.max(0, number);
+  if (number !== null) return Math.max(0, number);
+  const match = String(value || "").replace(/,/g, "").match(/-?\d+(?:\.\d+)?/);
+  if (!match) return fallback;
+  const parsed = Number(match[0]);
+  return Number.isFinite(parsed) ? Math.max(0, parsed) : fallback;
 }
 
 function normalizeAiMeal(value) {
@@ -1590,24 +1640,61 @@ function normalizeAiMeal(value) {
   return formValue($("#foodForm"), "meal") || "午餐";
 }
 
+function extractAiFoodItems(value, depth = 0) {
+  if (!value || depth > 5) return [];
+  if (Array.isArray(value)) return value.flatMap((item) => extractAiFoodItems(item, depth + 1));
+  if (typeof value !== "object") return [];
+  if (looksLikeAiFoodItem(value)) return [value];
+
+  const direct = AI_COLLECTION_KEYS.flatMap((key) => extractAiFoodItems(value[key], depth + 1));
+  if (direct.length) return direct;
+
+  return Object.values(value)
+    .filter((item) => item && typeof item === "object")
+    .flatMap((item) => extractAiFoodItems(item, depth + 1));
+}
+
+function looksLikeAiFoodItem(item) {
+  return pickAiField(item, AI_FOOD_NAME_KEYS) !== undefined && pickAiFoodValue(item, [...AI_GRAM_KEYS, ...AI_TOTAL_KCAL_KEYS, ...AI_KCAL100_KEYS]) !== undefined;
+}
+
+function pickAiFoodValue(item, keys) {
+  const direct = pickAiField(item, keys);
+  if (direct !== undefined) return direct;
+  return pickAiField(nestedAiNutrition(item), keys);
+}
+
+function pickAiField(item, keys) {
+  if (!item || typeof item !== "object") return undefined;
+  for (const key of keys) {
+    if (item[key] !== undefined && item[key] !== null && item[key] !== "") return item[key];
+  }
+  return undefined;
+}
+
+function nestedAiNutrition(item) {
+  const value = pickAiField(item, AI_NUTRITION_KEYS);
+  return value && typeof value === "object" ? value : null;
+}
+
 function normalizeAiFoodItem(item) {
   if (!item || typeof item !== "object") return null;
-  const foodName = String(item.foodName || item.name || item.food || "").trim();
+  const foodName = String(pickAiFoodValue(item, AI_FOOD_NAME_KEYS) || "").trim();
   if (!foodName) return null;
-  const grams = numberFromAi(item.grams ?? item.weightGrams ?? item.weight_g, 100);
-  const totalKcal = toNumber(item.kcal ?? item.calories ?? item.totalKcal);
+  const grams = numberFromAi(pickAiFoodValue(item, AI_GRAM_KEYS), 100);
+  const totalKcal = numberFromAi(pickAiFoodValue(item, AI_TOTAL_KCAL_KEYS), null);
   const kcal100 =
-    toNumber(item.kcal100 ?? item.caloriesPer100g ?? item.kcal_per_100g) ?? (totalKcal && grams ? (totalKcal / grams) * 100 : 0);
+    numberFromAi(pickAiFoodValue(item, AI_KCAL100_KEYS), null) ?? (totalKcal && grams ? (totalKcal / grams) * 100 : 0);
   return {
     id: newId("draft"),
-    meal: normalizeAiMeal(item.meal),
+    meal: normalizeAiMeal(pickAiFoodValue(item, AI_MEAL_KEYS)),
     foodName,
     grams: round(grams, 0),
     kcal100: round(Math.max(0, kcal100), 0),
-    protein100: round(numberFromAi(item.protein100 ?? item.proteinPer100g ?? item.protein_per_100g), 1),
-    carbs100: round(numberFromAi(item.carbs100 ?? item.carbsPer100g ?? item.carbs_per_100g), 1),
-    fat100: round(numberFromAi(item.fat100 ?? item.fatPer100g ?? item.fat_per_100g), 1),
-    notes: String(item.notes || item.note || "AI估算").trim()
+    protein100: round(numberFromAi(pickAiFoodValue(item, AI_PROTEIN100_KEYS)), 1),
+    carbs100: round(numberFromAi(pickAiFoodValue(item, AI_CARBS100_KEYS)), 1),
+    fat100: round(numberFromAi(pickAiFoodValue(item, AI_FAT100_KEYS)), 1),
+    notes: String(pickAiFoodValue(item, AI_NOTE_KEYS) || "AI估算").trim()
   };
 }
 
@@ -1884,7 +1971,7 @@ async function recognizeFoodPhoto() {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(foodApiErrorMessage(data, response.status));
 
-    const items = Array.isArray(data.items) ? data.items : Array.isArray(data.foods) ? data.foods : [];
+    const items = extractAiFoodItems(data);
     foodAiDrafts = items.map(normalizeAiFoodItem).filter(Boolean);
     renderFoodAiDrafts();
     if (!foodAiDrafts.length) {
