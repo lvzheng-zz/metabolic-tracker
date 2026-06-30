@@ -1373,13 +1373,34 @@ button:disabled {
   line-height: 1.45;
 }
 
-.device-import-panel {
+.device-import-panel,
+.health-auto-panel {
   display: grid;
   gap: 12px;
   padding: 12px;
   border: 1px dashed rgba(15, 118, 110, 0.3);
   border-radius: var(--radius);
   background: rgba(255, 255, 255, 0.76);
+}
+
+.health-auto-panel {
+  border-style: solid;
+  background: rgba(240, 248, 242, 0.72);
+}
+
+.health-shortcut-steps {
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.shortcut-steps {
+  padding: 0 12px 12px;
+}
+
+.shortcut-steps p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
 }
 
 .device-import-copy strong,

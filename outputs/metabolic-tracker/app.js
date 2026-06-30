@@ -1,6 +1,6 @@
 const STORAGE_KEY = "metabolic-tracker-v1";
 const AUTH_STORAGE_KEY = "metabolic-tracker-auth-v1";
-const APP_VERSION = "2026-06-30-multi-food-parse";
+const APP_VERSION = "2026-06-30-health-auto-sync";
 
 const BUILTIN_FOODS = [
   { name: "米饭（熟）", kcal100: 116, protein100: 2.6, carbs100: 25.9, fat100: 0.3 },
@@ -201,7 +201,9 @@ const ICONS = {
     '<circle cx="12" cy="12" r="5"></circle><path d="M9 2h6l1 4H8l1-4z"></path><path d="m9 22-1-4h8l-1 4H9z"></path><path d="M12 9v3l2 1"></path>',
   scale:
     '<path d="M16 16V7a4 4 0 0 0-8 0v9"></path><rect width="18" height="10" x="3" y="12" rx="2"></rect><path d="M12 7v1"></path><path d="M8 16h8"></path>',
-  info: '<circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path>'
+  info: '<circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path>',
+  copy:
+    '<rect width="14" height="14" x="8" y="8" rx="2"></rect><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>'
 };
 
 const $ = (selector, root = document) => root.querySelector(selector);
@@ -2171,6 +2173,13 @@ function setCloudSyncStatus(text, tone = "normal") {
   status.dataset.tone = tone === "error" ? "error" : "";
 }
 
+function setHealthSyncStatus(text, tone = "normal") {
+  const status = $("#healthSyncStatus");
+  if (!status) return;
+  status.textContent = text || "";
+  status.dataset.tone = tone === "error" ? "error" : "";
+}
+
 function renderCloudSyncSettings() {
   const endpointInput = $("#cloudApiEndpoint");
   if (!endpointInput) return;
@@ -2187,6 +2196,10 @@ function renderCloudSyncSettings() {
   $("#cloudPull").disabled = !loggedIn;
   $("#cloudPush").disabled = !loggedIn;
   $("#cloudLogout").disabled = !loggedIn;
+  const copyHealth = $("#copyHealthShortcutConfig");
+  const pullHealth = $("#pullHealthSyncNow");
+  if (copyHealth) copyHealth.disabled = !loggedIn;
+  if (pullHealth) pullHealth.disabled = !loggedIn;
 }
 
 function saveCloudEndpoint() {
@@ -2253,6 +2266,7 @@ async function pushCloudState({ silent = false } = {}) {
   }
   try {
     if (!silent) setCloudSyncStatus("正在上传当前数据...");
+    await mergeRemoteBeforePush();
     await cloudRequest("/sync", {
       method: "PUT",
       body: JSON.stringify({ state: cloudStatePayload() })
@@ -2261,6 +2275,16 @@ async function pushCloudState({ silent = false } = {}) {
   } catch (error) {
     setCloudSyncStatus(error.message || "上传失败。", "error");
   }
+}
+
+async function mergeRemoteBeforePush() {
+  const data = await cloudRequest("/sync", { method: "GET" });
+  const remoteState = remoteStateFromResponse(data);
+  if (!remoteState || (!remoteState.settings && !remoteState.foodEntries && !remoteState.bodyEntries && !remoteState.exerciseEntries)) return;
+  applyImportedState({ ...remoteState, type: "metabolic-tracker-merge", mode: "merge" });
+  saveState({ skipCloudSync: true });
+  fillFoodDatalist();
+  renderAll();
 }
 
 async function pullCloudState() {
@@ -2284,6 +2308,50 @@ async function pullCloudState() {
   } catch (error) {
     setCloudSyncStatus(error.message || "拉取失败。", "error");
   }
+}
+
+async function copyHealthShortcutConfig() {
+  if (!authState.token) {
+    setHealthSyncStatus("请先在上方登录云端。", "error");
+    return;
+  }
+  try {
+    saveCloudEndpoint();
+    const endpoint = new URL(cloudApiUrl("/health/import"), window.location.href).href;
+    const payload = {
+      date: todayISO(),
+      weight: 100.0,
+      bodyFat: 35.0,
+      sleepHours: 7.5,
+      exerciseMinutes: 45,
+      exerciseKcal: 320,
+      heartRate: 125,
+      source: "Apple 健康快捷指令"
+    };
+    const config = {
+      url: endpoint,
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${authState.token}`
+      },
+      body: payload
+    };
+    await copyTextToClipboard(JSON.stringify(config, null, 2));
+    setHealthSyncStatus("已复制配置。到快捷指令里用“获取 URL 内容”按这个填。");
+  } catch (error) {
+    setHealthSyncStatus(error.message || "复制失败。", "error");
+  }
+}
+
+async function pullHealthSyncNow() {
+  if (!authState.token) {
+    setHealthSyncStatus("请先在上方登录云端。", "error");
+    return;
+  }
+  setHealthSyncStatus("正在拉取健康同步数据...");
+  await pullCloudState();
+  setHealthSyncStatus("已拉取云端数据。");
 }
 
 function logoutCloudSync() {
@@ -2310,6 +2378,23 @@ function exportState() {
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
+}
+
+async function copyTextToClipboard(text) {
+  if (navigator.clipboard?.writeText && window.isSecureContext) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.left = "-9999px";
+  document.body.append(textarea);
+  textarea.select();
+  const ok = document.execCommand("copy");
+  textarea.remove();
+  if (!ok) throw new Error("浏览器没有允许复制，请手动复制。");
 }
 
 function mergeById(existing, incoming) {
@@ -3157,6 +3242,8 @@ function bindEvents() {
     event.target.value = "";
   });
   $("#downloadDeviceTemplate").addEventListener("click", downloadDeviceCsvTemplate);
+  $("#copyHealthShortcutConfig").addEventListener("click", copyHealthShortcutConfig);
+  $("#pullHealthSyncNow").addEventListener("click", pullHealthSyncNow);
   $("#clearData").addEventListener("click", clearState);
   $("#cloudApiEndpoint").addEventListener("change", saveCloudEndpoint);
   $("#cloudLogin").addEventListener("click", loginCloudSync);

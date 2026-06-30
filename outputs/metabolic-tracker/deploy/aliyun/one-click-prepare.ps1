@@ -98,6 +98,7 @@ New-Item -ItemType Directory -Path $outDir -Force | Out-Null
 $salt = New-RandomHex 16
 $passwordHash = Get-Sha256Hex "$salt`:$Password"
 $jwtSecret = New-RandomHex 32
+$healthImportToken = New-RandomHex 32
 $Password = $null
 
 $zipPath = Join-Path $outDir "metabolic-tracker-fc-upload.zip"
@@ -111,6 +112,7 @@ APP_PASSWORD_SALT=$salt
 APP_PASSWORD_SHA256=$passwordHash
 APP_JWT_SECRET=$jwtSecret
 APP_TOKEN_TTL_SECONDS=2592000
+APP_HEALTH_IMPORT_TOKEN=$healthImportToken
 
 # Optional: enable after you have an OpenAI-compatible vision API key.
 # OPENAI_API_KEY=sk-...

@@ -64,6 +64,14 @@ outputs/one-click-prepare.cmd
 
 网页饮食页里有 `接口自检`，可以确认线上函数是否已部署新版、Key 是否已配置、模型和接口地址是否生效。
 
+## Apple 健康 / 电子秤自动同步
+
+- 网页不能直接后台读取 Apple 健康或蓝牙电子秤。
+- 自动同步走 `/api/health/import`：iPhone 快捷指令读取 Apple 健康，再 POST 到这个接口。
+- 电子秤需要先通过厂商 App 写入 Apple 健康里的体重/体脂。
+- 数据页登录云端后，点 `复制快捷指令配置` 可以复制 URL、Authorization 和示例 JSON。
+- 可选长期方案：在函数环境变量加入 `APP_HEALTH_IMPORT_TOKEN`，快捷指令用请求头 `X-Health-Import-Token`，避免登录 token 到期。
+
 ## 环境变量
 
 新手版直接复制 `outputs/aliyun-oneclick/env-to-copy.txt` 前 6 行。

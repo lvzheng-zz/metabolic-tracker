@@ -7,7 +7,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="减脂记录" />
     <title>代谢减脂记录</title>
-    <link rel="stylesheet" href="./styles.css?v=20260630-multi-food-parse" />
+    <link rel="stylesheet" href="./styles.css?v=20260630-health-auto-sync" />
   </head>
   <body>
     <div class="app-shell">
@@ -915,21 +915,44 @@
                   <span class="icon" data-icon="watch"></span>
                   <div>
                     <strong>Apple Watch</strong>
-                    <p>导入 Apple 健康的 export.zip 或 export.xml，同步运动、睡眠、体重。</p>
+                    <p>用快捷指令自动推送睡眠、运动和活动消耗。</p>
                   </div>
                 </article>
                 <article class="device-link-card">
                   <span class="icon" data-icon="scale"></span>
                   <div>
                     <strong>电子秤</strong>
-                    <p>导入 CSV，同步体重、体脂；也支持从 Apple 健康里的体重记录导入。</p>
+                    <p>电子秤 App 写入 Apple 健康后自动同步体重、体脂。</p>
                   </div>
                 </article>
               </div>
+              <div class="health-auto-panel">
+                <div class="device-import-copy">
+                  <strong>Apple 健康自动同步</strong>
+                  <p>登录云端后复制配置，在 iPhone 快捷指令里把每日健康数据 POST 到接口。</p>
+                </div>
+                <div class="device-import-actions">
+                  <button id="copyHealthShortcutConfig" class="secondary-button" type="button">
+                    <span class="icon" data-icon="copy"></span>
+                    <span>复制快捷指令配置</span>
+                  </button>
+                  <button id="pullHealthSyncNow" class="ghost-button" type="button">
+                    <span class="icon" data-icon="refresh-cw"></span>
+                    <span>拉取健康同步</span>
+                  </button>
+                </div>
+                <details class="advanced-fields health-shortcut-steps">
+                  <summary>快捷指令步骤</summary>
+                  <div class="shortcut-steps">
+                    <p>自动化时间建议设在每天早上；先读取 Apple 健康近 1 天体重、体脂、睡眠、运动分钟、活动能量，再用“获取 URL 内容”发送 JSON。</p>
+                  </div>
+                </details>
+                <p id="healthSyncStatus" class="save-status" aria-live="polite"></p>
+              </div>
               <div class="device-import-panel">
                 <div class="device-import-copy">
-                  <strong>设备文件导入</strong>
-                  <p>支持 Apple 健康导出的 export.zip / export.xml，以及通用 CSV：date, weight, bodyFat, sleep, exerciseMinutes, exerciseKcal。</p>
+                  <strong>历史文件补录</strong>
+                  <p>用于一次性补历史数据：Apple 健康 export.zip / export.xml，或 CSV。</p>
                 </div>
                 <div class="device-import-actions">
                   <label class="file-button">
@@ -966,6 +989,6 @@
       </article>
     </template>
 
-    <script src="./app.js?v=20260630-multi-food-parse"></script>
+    <script src="./app.js?v=20260630-health-auto-sync"></script>
   </body>
 </html>

@@ -16,6 +16,7 @@ let ossClientPromise = null;
 const routes = new Map([
   ["/api/auth/login", authLogin],
   ["/api/recognize-food", recognizeFood],
+  ["/api/health/import", importHealthData],
   ["/api/sync", syncState]
 ]);
 
@@ -144,6 +145,72 @@ async function syncState(req, res) {
   }
 }
 
+async function importHealthData(req, res) {
+  setCorsHeaders(res, "GET, POST, OPTIONS");
+
+  if (req.method === "OPTIONS") {
+    res.status(204).end();
+    return;
+  }
+
+  if (req.method === "GET") {
+    sendJson(res, 200, {
+      ok: true,
+      endpoint: "/api/health/import",
+      accepts: ["date", "weight", "bodyFat", "sleepHours", "exerciseMinutes", "exerciseKcal", "workouts"],
+      auth: process.env.APP_HEALTH_IMPORT_TOKEN ? "X-Health-Import-Token or Authorization" : "Authorization"
+    });
+    return;
+  }
+
+  if (req.method !== "POST") {
+    sendJson(res, 405, { error: "Method not allowed" });
+    return;
+  }
+
+  let body;
+  let user;
+  try {
+    body = await readJsonBody(req);
+    user = verifyHealthImportRequest(req, body);
+  } catch (error) {
+    sendJson(res, 401, { error: error.message || "Health import is not authorized." });
+    return;
+  }
+
+  try {
+    const imported = normalizeHealthImportPayload(body);
+    const bodyCount = imported.bodyEntries.length;
+    const exerciseCount = imported.exerciseEntries.length;
+    if (!bodyCount && !exerciseCount) {
+      sendJson(res, 400, { error: "No usable health data was found." });
+      return;
+    }
+
+    const current = (await readCloudState(user.username)) || {};
+    const nextState = mergeHealthImportIntoState(current, imported);
+    const serialized = JSON.stringify({
+      state: nextState,
+      updatedAt: new Date().toISOString()
+    });
+    if (serialized.length > maxStateChars) {
+      sendJson(res, 413, { error: "State is too large" });
+      return;
+    }
+
+    await writeCloudState(user.username, serialized);
+    sendJson(res, 200, {
+      ok: true,
+      source: imported.source,
+      bodyCount,
+      exerciseCount,
+      updatedAt: nextState.updatedAt
+    });
+  } catch (error) {
+    sendJson(res, 500, { error: error.message || "Health import failed" });
+  }
+}
+
 async function recognizeFood(req, res) {
   try {
     if (!recognizeFoodHandlerPromise) {
@@ -161,7 +228,7 @@ async function recognizeFood(req, res) {
 function setCorsHeaders(res, methods = "GET, PUT, POST, OPTIONS") {
   res.setHeader("Access-Control-Allow-Origin", process.env.ALLOWED_ORIGIN || "*");
   res.setHeader("Access-Control-Allow-Methods", methods);
-  res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type");
+  res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Health-Import-Token");
 }
 
 function sendJson(res, status, data) {
@@ -224,6 +291,15 @@ function verifyRequest(req) {
   if (!payload.exp || payload.exp < Math.floor(Date.now() / 1000)) throw new Error("Token expired");
   if (!payload.username) throw new Error("Invalid token payload");
   return payload;
+}
+
+function verifyHealthImportRequest(req, body = {}) {
+  const importToken = process.env.APP_HEALTH_IMPORT_TOKEN;
+  const provided = String(req.headers["x-health-import-token"] || body.token || "").trim();
+  if (importToken && provided && safeStringEqual(provided, importToken)) {
+    return { username: requireEnv("APP_USERNAME"), source: "health-import-token" };
+  }
+  return verifyRequest(req);
 }
 
 function safeStringEqual(a, b) {
@@ -312,6 +388,150 @@ function ossKey(username) {
 
 function safeKey(value) {
   return encodeURIComponent(String(value || "user").trim().toLowerCase());
+}
+
+function normalizeHealthImportPayload(body) {
+  const source = String(body.source || "Apple 健康自动同步").slice(0, 60);
+  const bodyMap = new Map();
+  const exerciseEntries = [];
+
+  normalizeBodyEntries(body.bodyEntries || body.body || body.metrics).forEach((entry) => {
+    mergeBodyEntryByDate(bodyMap, entry);
+  });
+
+  const topLevelBody = normalizeBodyEntry(body, body.date || body.day || body.startDate);
+  if (topLevelBody) mergeBodyEntryByDate(bodyMap, topLevelBody);
+
+  normalizeExerciseEntries(body.exerciseEntries || body.exercises || body.workouts, source).forEach((entry) => {
+    exerciseEntries.push(entry);
+  });
+
+  const topLevelExercise = normalizeExerciseEntry(body, source, body.date || body.day || body.startDate);
+  if (topLevelExercise) exerciseEntries.push(topLevelExercise);
+
+  return {
+    source,
+    bodyEntries: Array.from(bodyMap.values()),
+    exerciseEntries: dedupeById(exerciseEntries)
+  };
+}
+
+function normalizeBodyEntries(value) {
+  const items = Array.isArray(value) ? value : value && typeof value === "object" ? [value] : [];
+  return items.map((item) => normalizeBodyEntry(item, item.date || item.day || item.startDate)).filter(Boolean);
+}
+
+function normalizeBodyEntry(item, rawDate) {
+  if (!item || typeof item !== "object") return null;
+  const date = normalizeDate(rawDate);
+  if (!date) return null;
+  const entry = { id: `body-health-${date}`, date };
+  addNumberField(entry, "weight", item.weight ?? item.bodyWeight ?? item.bodyMass ?? item.kg, 1);
+  addNumberField(entry, "bodyFat", item.bodyFat ?? item.bodyFatPercentage ?? item.fatPercentage, 1, true);
+  addNumberField(entry, "sleep", item.sleep ?? item.sleepHours ?? item.sleepH ?? item.asleepHours, 1);
+  return Object.keys(entry).length > 2 ? entry : null;
+}
+
+function normalizeExerciseEntries(value, source) {
+  const items = Array.isArray(value) ? value : value && typeof value === "object" ? [value] : [];
+  return items.map((item) => normalizeExerciseEntry(item, source, item.date || item.day || item.startDate)).filter(Boolean);
+}
+
+function normalizeExerciseEntry(item, source, rawDate) {
+  if (!item || typeof item !== "object") return null;
+  const date = normalizeDate(rawDate);
+  if (!date) return null;
+  const minutes = numberFromText(item.minutes ?? item.exerciseMinutes ?? item.durationMinutes ?? item.workoutMinutes);
+  const kcal = numberFromText(item.kcal ?? item.exerciseKcal ?? item.activeEnergyKcal ?? item.calories ?? item.energy);
+  if (minutes === null && kcal === null) return null;
+  const type = String(item.type || item.workoutType || item.activity || "Apple Watch 活动").trim();
+  return {
+    id: item.id || `exercise-health-${date}-${hashText(`${type}-${minutes ?? 0}-${kcal ?? 0}-${item.startDate || ""}`)}`,
+    date,
+    type,
+    minutes: roundNumber(minutes ?? 0, 0),
+    intensity: item.intensity || "normal",
+    heartRate: numberFromText(item.heartRate ?? item.avgHeartRate ?? item.averageHeartRate) ?? "",
+    kcal: roundNumber(kcal ?? 0, 0),
+    notes: String(item.notes || item.note || source || "Apple 健康自动同步").trim()
+  };
+}
+
+function mergeHealthImportIntoState(current, imported) {
+  return {
+    ...current,
+    bodyEntries: mergeBodyEntriesByDate(current.bodyEntries, imported.bodyEntries),
+    exerciseEntries: mergeEntriesById(current.exerciseEntries, imported.exerciseEntries),
+    updatedAt: new Date().toISOString()
+  };
+}
+
+function mergeBodyEntryByDate(map, entry) {
+  const current = map.get(entry.date) || { id: entry.id || `body-health-${entry.date}`, date: entry.date };
+  map.set(entry.date, { ...current, ...entry, id: current.id || entry.id });
+}
+
+function mergeBodyEntriesByDate(existing = [], incoming = []) {
+  const map = new Map();
+  (Array.isArray(existing) ? existing : []).forEach((entry) => {
+    if (entry?.date) map.set(entry.date, entry);
+  });
+  incoming.forEach((entry) => {
+    if (!entry?.date) return;
+    map.set(entry.date, { ...(map.get(entry.date) || {}), ...entry });
+  });
+  return Array.from(map.values());
+}
+
+function mergeEntriesById(existing = [], incoming = []) {
+  const map = new Map();
+  (Array.isArray(existing) ? existing : []).forEach((entry) => {
+    if (entry?.id) map.set(entry.id, entry);
+  });
+  incoming.forEach((entry) => {
+    if (!entry?.id) return;
+    map.set(entry.id, { ...(map.get(entry.id) || {}), ...entry });
+  });
+  return Array.from(map.values());
+}
+
+function dedupeById(entries) {
+  return mergeEntriesById([], entries);
+}
+
+function addNumberField(entry, key, value, digits = 1, percent = false) {
+  const number = numberFromText(value);
+  if (number === null) return;
+  entry[key] = roundNumber(percent && number <= 1 ? number * 100 : number, digits);
+}
+
+function normalizeDate(value) {
+  const text = String(value || "").trim();
+  const direct = text.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
+  if (direct) return `${direct[1]}-${direct[2].padStart(2, "0")}-${direct[3].padStart(2, "0")}`;
+  const parsed = new Date(text);
+  if (Number.isNaN(parsed.getTime())) return "";
+  const shifted = new Date(parsed.getTime() - parsed.getTimezoneOffset() * 60000);
+  return shifted.toISOString().slice(0, 10);
+}
+
+function numberFromText(value) {
+  if (value === null || value === undefined || value === "") return null;
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  const text = String(value).replace(/,/g, "").trim();
+  const direct = Number(text);
+  if (Number.isFinite(direct)) return direct;
+  const match = text.match(/-?\d+(?:\.\d+)?/);
+  return match ? Number(match[0]) : null;
+}
+
+function roundNumber(value, digits = 0) {
+  const factor = 10 ** digits;
+  return Math.round(value * factor) / factor;
+}
+
+function hashText(text) {
+  return createHash("sha1").update(String(text)).digest("hex").slice(0, 12);
 }
 
 async function serveStatic(pathname, res) {
