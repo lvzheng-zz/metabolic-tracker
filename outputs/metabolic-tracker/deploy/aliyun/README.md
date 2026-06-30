@@ -55,9 +55,12 @@ outputs/one-click-prepare.cmd
 如果使用阿里云百炼/DashScope，可以改用：
 
 - `DASHSCOPE_API_KEY=你的百炼 API Key`
+- `DASHSCOPE_WORKSPACE_ID=你的业务空间 ID`
+- `DASHSCOPE_REGION=cn-beijing`
 - `DASHSCOPE_MODEL=qwen-vl-plus`
-- `OPENAI_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1`
 - `OPENAI_API_STYLE=chat`
+
+百炼控制台没有香港地域是正常的。模型服务选 `华北2（北京）`，这里对应 `DASHSCOPE_REGION=cn-beijing`；函数计算和自定义域名仍然部署在中国香港。
 
 网页饮食页里有 `接口自检`，可以确认线上函数是否已部署新版、Key 是否已配置、模型和接口地址是否生效。
 

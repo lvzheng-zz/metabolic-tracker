@@ -1,6 +1,6 @@
 const STORAGE_KEY = "metabolic-tracker-v1";
 const AUTH_STORAGE_KEY = "metabolic-tracker-auth-v1";
-const APP_VERSION = "2026-06-29-ai-diagnostics";
+const APP_VERSION = "2026-06-30-dashscope-workspace";
 
 const BUILTIN_FOODS = [
   { name: "米饭（熟）", kcal100: 116, protein100: 2.6, carbs100: 25.9, fat100: 0.3 },
@@ -1808,10 +1808,12 @@ function foodAiStatusMessage(data) {
     `接口版本：${data.version || "未知，可能还没部署新版"}`,
     `Key：${data.hasApiKey ? "已配置" : "未配置"}`,
     `服务：${data.provider || "--"}`,
+    data.provider === "dashscope" ? `百炼地域：${data.dashScopeRegion || "--"}` : "",
+    data.provider === "dashscope" ? `业务空间：${data.dashScopeWorkspace || "--"}` : "",
     `模型：${data.model || "--"}`,
     `地址：${data.baseUrlHost || "--"}`,
     `模式：${data.apiStyle || "--"}`
-  ];
+  ].filter(Boolean);
   if (Array.isArray(data.hints) && data.hints.length) lines.push(`提示：${data.hints.join("；")}`);
   return lines.join("｜");
 }

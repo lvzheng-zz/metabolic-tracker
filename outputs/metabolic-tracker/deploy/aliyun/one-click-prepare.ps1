@@ -92,8 +92,9 @@ APP_TOKEN_TTL_SECONDS=2592000
 
 # Optional: Alibaba Cloud Model Studio / DashScope alternative.
 # DASHSCOPE_API_KEY=sk-...
+# DASHSCOPE_WORKSPACE_ID=llm-...
+# DASHSCOPE_REGION=cn-beijing
 # DASHSCOPE_MODEL=qwen-vl-plus
-# OPENAI_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
 # OPENAI_API_STYLE=chat
 
 # Optional: fill later for durable multi-device sync.

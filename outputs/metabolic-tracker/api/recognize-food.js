@@ -5,7 +5,8 @@ const DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
 const DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1";
 const DEFAULT_DASHSCOPE_MODEL = "qwen-vl-plus";
 const DEFAULT_DASHSCOPE_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1";
-const RECOGNIZE_FOOD_VERSION = "2026-06-29-ai-diagnostics";
+const DEFAULT_DASHSCOPE_REGION = "cn-beijing";
+const RECOGNIZE_FOOD_VERSION = "2026-06-30-dashscope-workspace";
 
 const foodResultSchema = {
   type: "object",
@@ -112,6 +113,7 @@ function recognitionStatus() {
   const apiKey = provider.apiKey;
   const model = provider.model;
   const baseUrl = provider.baseUrl;
+  const workspaceConfigured = provider.provider !== "dashscope" || Boolean(provider.workspaceId);
   const configuredStyle = cleanEnv("OPENAI_API_STYLE").toLowerCase();
   const apiStyle = ["responses", "chat", "auto"].includes(configuredStyle) ? configuredStyle : "chat";
   let baseUrlHost = "";
@@ -121,24 +123,34 @@ function recognitionStatus() {
     baseUrlHost = "invalid";
   }
   return {
-    ok: Boolean(apiKey) && !isPlaceholder(model) && baseUrlHost !== "invalid",
+    ok: Boolean(apiKey) && !isPlaceholder(model) && baseUrlHost !== "invalid" && workspaceConfigured,
     version: RECOGNIZE_FOOD_VERSION,
     hasApiKey: Boolean(apiKey),
     provider: provider.provider,
+    dashScopeRegion: provider.provider === "dashscope" ? provider.region : "",
+    dashScopeWorkspace: provider.provider === "dashscope" ? (provider.workspaceId ? "已配置" : "未配置") : "",
     model,
     apiStyle,
     baseUrlHost,
     maxImageMB: Math.round((MAX_IMAGE_CHARS * 3) / 4 / 1024 / 1024),
-    hints: recognitionHints({ apiKey, model, baseUrlHost, apiStyle, provider: provider.provider })
+    hints: recognitionHints({
+      apiKey,
+      model,
+      baseUrlHost,
+      apiStyle,
+      provider: provider.provider,
+      workspaceConfigured
+    })
   };
 }
 
-function recognitionHints({ apiKey, model, baseUrlHost, apiStyle, provider }) {
+function recognitionHints({ apiKey, model, baseUrlHost, apiStyle, provider, workspaceConfigured }) {
   const hints = [];
   if (!apiKey) hints.push("未配置 OPENAI_API_KEY 或 DASHSCOPE_API_KEY，拍照识别不会真正调用。");
   if (isPlaceholder(model)) hints.push("OPENAI_MODEL 仍是示例占位值，请删除或改成真实视觉模型。");
   if (baseUrlHost === "invalid") hints.push("OPENAI_BASE_URL 不是有效 URL。");
   if (provider === "dashscope") hints.push("当前使用阿里云百炼/DashScope 兼容接口。");
+  if (provider === "dashscope" && !workspaceConfigured) hints.push("新版百炼地域接口需要 DASHSCOPE_WORKSPACE_ID，请从业务空间管理复制业务空间 ID。");
   if (apiStyle === "responses") hints.push("当前使用 Responses API；兼容接口失败时可改为 chat。");
   if (!hints.length) hints.push("基础配置看起来正常；如果仍失败，多半是模型权限、余额、网络或图片格式问题。");
   return hints;
@@ -443,14 +455,21 @@ function aiProviderConfig() {
   const dashScopeKey = cleanEnv("DASHSCOPE_API_KEY") || cleanEnv("BAILIAN_API_KEY");
   const useDashScope = !openAiKey && Boolean(dashScopeKey);
   const provider = useDashScope ? "dashscope" : "openai";
-  const explicitBaseUrl = cleanEnv("OPENAI_BASE_URL") || cleanEnv("OPENAI_API_BASE");
+  const dashScopeWorkspaceId = cleanEnv("DASHSCOPE_WORKSPACE_ID") || cleanEnv("BAILIAN_WORKSPACE_ID");
+  const dashScopeRegion = cleanEnv("DASHSCOPE_REGION") || DEFAULT_DASHSCOPE_REGION;
+  const dashScopeRegionalBaseUrl = dashScopeWorkspaceId
+    ? `https://${dashScopeWorkspaceId}.${dashScopeRegion}.maas.aliyuncs.com/compatible-mode/v1`
+    : DEFAULT_DASHSCOPE_BASE_URL;
+  const explicitBaseUrl = cleanEnv("DASHSCOPE_BASE_URL") || cleanEnv("OPENAI_BASE_URL") || cleanEnv("OPENAI_API_BASE");
   const baseUrl =
     useDashScope && (!explicitBaseUrl || normalizeBaseUrl(explicitBaseUrl) === DEFAULT_OPENAI_BASE_URL)
-      ? DEFAULT_DASHSCOPE_BASE_URL
-      : explicitBaseUrl || (useDashScope ? DEFAULT_DASHSCOPE_BASE_URL : DEFAULT_OPENAI_BASE_URL);
+      ? dashScopeRegionalBaseUrl
+      : explicitBaseUrl || (useDashScope ? dashScopeRegionalBaseUrl : DEFAULT_OPENAI_BASE_URL);
   return {
     provider,
     apiKey: openAiKey || dashScopeKey,
+    workspaceId: dashScopeWorkspaceId,
+    region: dashScopeRegion,
     model: cleanEnv("OPENAI_MODEL") || cleanEnv("DASHSCOPE_MODEL") || (useDashScope ? DEFAULT_DASHSCOPE_MODEL : DEFAULT_OPENAI_MODEL),
     baseUrl: normalizeBaseUrl(baseUrl)
   };
