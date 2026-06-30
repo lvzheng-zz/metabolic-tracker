@@ -87,3 +87,5 @@ outputs/one-click-prepare.cmd
 4. 复制 `outputs/aliyun-oneclick/env-to-copy.txt` 前 6 行到环境变量。
 5. 配置 `health.384571259.xyz` 到函数计算。
 6. 打开页面确认能访问。
+
+注意：上传包必须用 `one-click-prepare.ps1` 生成，脚本会把 zip 内路径写成 Linux 可识别的 `/`。不要直接用 Windows `Compress-Archive` 手工压缩，否则阿里云可能找不到 `api/recognize-food.js`。

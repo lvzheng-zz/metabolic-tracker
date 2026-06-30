@@ -329,6 +329,7 @@ async function serveStatic(pathname, res) {
     if (!fileStat.isFile()) throw new Error("Not a file");
     res.statusCode = 200;
     res.setHeader("Content-Type", contentType(filePath));
+    res.setHeader("Cache-Control", cacheControl(filePath));
     createReadStream(filePath).pipe(res);
   } catch {
     res.statusCode = 404;
@@ -346,4 +347,10 @@ function contentType(filePath) {
   if (ext === ".png") return "image/png";
   if (ext === ".jpg" || ext === ".jpeg") return "image/jpeg";
   return "application/octet-stream";
+}
+
+function cacheControl(filePath) {
+  const ext = path.extname(filePath).toLowerCase();
+  if ([".html", ".css", ".js"].includes(ext)) return "no-store, max-age=0";
+  return "public, max-age=3600";
 }

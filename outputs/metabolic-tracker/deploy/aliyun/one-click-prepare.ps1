@@ -29,6 +29,39 @@ function Get-Sha256Hex {
   return -join ($hash | ForEach-Object { $_.ToString("x2") })
 }
 
+function New-ForwardSlashZip {
+  param(
+    [string]$SourceDir,
+    [string]$DestinationPath,
+    [string[]]$ExcludedNames
+  )
+
+  Add-Type -AssemblyName System.IO.Compression
+  Add-Type -AssemblyName System.IO.Compression.FileSystem
+  if (Test-Path $DestinationPath) { Remove-Item $DestinationPath -Force }
+
+  $sourceRoot = (Resolve-Path $SourceDir).Path.TrimEnd("\", "/")
+  $sourcePrefix = "$sourceRoot\"
+  $zip = [System.IO.Compression.ZipFile]::Open($DestinationPath, [System.IO.Compression.ZipArchiveMode]::Create)
+  try {
+    Get-ChildItem -Path $sourceRoot -Recurse -File -Force | Where-Object {
+      $relative = $_.FullName.Substring($sourcePrefix.Length)
+      $parts = $relative -split '[\\/]'
+      -not ($parts | Where-Object { $ExcludedNames -contains $_ })
+    } | ForEach-Object {
+      $relative = $_.FullName.Substring($sourcePrefix.Length).Replace('\', '/')
+      [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
+        $zip,
+        $_.FullName,
+        $relative,
+        [System.IO.Compression.CompressionLevel]::Optimal
+      ) | Out-Null
+    }
+  } finally {
+    $zip.Dispose()
+  }
+}
+
 Write-Host ""
 Write-Host "Metabolic Tracker - one-click deploy prep" -ForegroundColor Cyan
 Write-Host "This script only creates a zip and env file locally. It does not log in to Alibaba Cloud or change DNS."
@@ -68,12 +101,7 @@ $jwtSecret = New-RandomHex 32
 $Password = $null
 
 $zipPath = Join-Path $outDir "metabolic-tracker-fc-upload.zip"
-if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
-
-$packageItems = Get-ChildItem -Path $appRoot -Force | Where-Object {
-  $_.Name -notin @("node_modules", ".metabolic-tracker-data")
-}
-Compress-Archive -Path $packageItems.FullName -DestinationPath $zipPath -Force
+New-ForwardSlashZip -SourceDir $appRoot -DestinationPath $zipPath -ExcludedNames @("node_modules", ".metabolic-tracker-data")
 
 $envPath = Join-Path $outDir "env-to-copy.txt"
 @"
