@@ -1,6 +1,6 @@
 const STORAGE_KEY = "metabolic-tracker-v1";
 const AUTH_STORAGE_KEY = "metabolic-tracker-auth-v1";
-const APP_VERSION = "2026-06-30-bear-app";
+const APP_VERSION = "2026-06-30-bear-polish";
 
 const BUILTIN_FOODS = [
   { name: "米饭（熟）", kcal100: 116, protein100: 2.6, carbs100: 25.9, fat100: 0.3 },
@@ -877,7 +877,8 @@ function renderDashboard() {
   const supplementPill = $("#todaySupplementPill");
   if (proteinPill) proteinPill.textContent = `蛋白 ${round(summary.food.protein, 1)} / ${round(targets.protein, 1)}g`;
   if (movePill) movePill.textContent = `运动 ${Math.round(summary.exercise.minutes)} / ${moveTarget}min`;
-  if (supplementPill) supplementPill.textContent = `补剂 ${supplements.done} / ${supplements.total}`;
+  const supplementDone = supplements.taken ?? supplements.done ?? 0;
+  if (supplementPill) supplementPill.textContent = `补剂 ${supplementDone} / ${supplements.total}`;
 
   const latestWeight = currentWeight();
   $("#latestWeight").textContent = latestWeight ? formatUnit(latestWeight, "kg", 1) : "--";
@@ -918,7 +919,8 @@ function bearMoodForDay(summary, targets, supplements) {
       text: "优先补肉蛋奶豆，外卖先看主食、肉和饮料。"
     };
   }
-  if (summary.exercise.minutes >= 150 || supplements.done >= supplements.total && supplements.total > 0) {
+  const supplementDone = supplements.taken ?? supplements.done ?? 0;
+  if (summary.exercise.minutes >= 150 || supplementDone >= supplements.total && supplements.total > 0) {
     return {
       mood: "done",
       title: "小熊打卡很稳",
@@ -3182,6 +3184,61 @@ function canvasContext(canvas) {
   return { ctx, width, height };
 }
 
+function drawCanvasBearFace(ctx, x, y, scale = 1) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(scale, scale);
+  ctx.fillStyle = "rgba(31, 41, 51, 0.1)";
+  ctx.beginPath();
+  ctx.ellipse(0, 74, 60, 10, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#9b6842";
+  ctx.strokeStyle = "#774b2d";
+  ctx.lineWidth = 4;
+  [-38, 38].forEach((earX) => {
+    ctx.beginPath();
+    ctx.arc(earX, -24, 24, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = "#d89a75";
+    ctx.beginPath();
+    ctx.arc(earX, -24, 12, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#9b6842";
+  });
+  ctx.beginPath();
+  ctx.arc(0, 8, 52, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = "#ffc8b8";
+  [-32, 32].forEach((cheekX) => {
+    ctx.beginPath();
+    ctx.arc(cheekX, 16, 9, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.fillStyle = "#2b211d";
+  [-16, 16].forEach((eyeX) => {
+    ctx.beginPath();
+    ctx.arc(eyeX, 0, 6, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.fillStyle = "#ffe4c8";
+  ctx.beginPath();
+  ctx.ellipse(0, 23, 25, 18, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#2b211d";
+  ctx.beginPath();
+  ctx.ellipse(0, 15, 9, 7, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#2b211d";
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(-10, 27);
+  ctx.quadraticCurveTo(0, 36, 10, 27);
+  ctx.stroke();
+  ctx.restore();
+}
+
 function drawEmptyChart(ctx, width, height, text, detail = "记录几天后这里会自动生成趋势") {
   ctx.clearRect(0, 0, width, height);
   ctx.fillStyle = "#fbfdf8";
@@ -3190,13 +3247,14 @@ function drawEmptyChart(ctx, width, height, text, detail = "记录几天后这�
   ctx.setLineDash([6, 6]);
   ctx.strokeRect(0.5, 0.5, width - 1, height - 1);
   ctx.setLineDash([]);
+  drawCanvasBearFace(ctx, width / 2, height / 2 - 52, 0.52);
   ctx.fillStyle = "#0f766e";
   ctx.font = '700 14px "Microsoft YaHei", sans-serif';
   ctx.textAlign = "center";
-  ctx.fillText("ʕ·ᴥ·ʔ  " + text, width / 2, height / 2 - 6);
+  ctx.fillText(text, width / 2, height / 2 + 22);
   ctx.fillStyle = "#65717f";
   ctx.font = '12px "Microsoft YaHei", sans-serif';
-  ctx.fillText(detail, width / 2, height / 2 + 18);
+  ctx.fillText(detail, width / 2, height / 2 + 46);
 }
 
 function drawBodyChart(progress = 1) {

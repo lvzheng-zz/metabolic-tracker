@@ -2119,6 +2119,173 @@ button:disabled {
 }
 
 /* Bear app refresh */
+.soft-bear {
+  display: block;
+  width: 100%;
+  overflow: visible;
+}
+
+.soft-bear-main {
+  max-width: 230px;
+}
+
+.soft-bear-card {
+  max-width: 170px;
+}
+
+.soft-bear-shadow {
+  fill: rgba(31, 41, 51, 0.12);
+}
+
+.soft-bear-body,
+.soft-bear-head,
+.soft-bear-ear,
+.soft-bear-tuft,
+.soft-bear-foot {
+  fill: #9b6842;
+  stroke: #774b2d;
+  stroke-linejoin: round;
+}
+
+.soft-bear-body,
+.soft-bear-head,
+.soft-bear-ear {
+  stroke-width: 3.5;
+}
+
+.soft-bear-inner-ear {
+  fill: #d89a75;
+  opacity: 0.82;
+}
+
+.soft-bear-belly,
+.soft-bear-muzzle {
+  fill: #ffe4c8;
+}
+
+.soft-bear-blush {
+  fill: #ffc8b8;
+  opacity: 0.82;
+}
+
+.soft-bear-eye,
+.soft-bear-nose {
+  fill: #2b211d;
+}
+
+.soft-bear-eye-shine {
+  fill: rgba(255, 255, 255, 0.92);
+}
+
+.soft-bear-brow,
+.soft-bear-mouth,
+.soft-bear-badge-line {
+  fill: none;
+  stroke: #2b211d;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.soft-bear-brow {
+  stroke-width: 4;
+}
+
+.soft-bear-mouth {
+  stroke-width: 4.5;
+}
+
+.soft-bear-arm {
+  fill: none;
+  stroke: #8d5d39;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.soft-bear-main .soft-bear-arm {
+  stroke-width: 24;
+}
+
+.soft-bear-card .soft-bear-arm {
+  stroke-width: 18;
+}
+
+.soft-bear-badge,
+.soft-bear-wristband,
+.soft-bear-headband {
+  fill: none;
+  stroke: #7bc8b6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.soft-bear-badge {
+  fill: #a8e0cf;
+  stroke-width: 4;
+}
+
+.soft-bear-badge-line {
+  stroke: #ffffff;
+  stroke-width: 3.5;
+}
+
+.soft-bear-wristband,
+.soft-bear-headband {
+  stroke-width: 9;
+}
+
+.soft-bear-bowl {
+  fill: #fff4df;
+  stroke: #d7b58d;
+  stroke-width: 4;
+  stroke-linejoin: round;
+}
+
+.soft-bear-scope {
+  fill: #5e4632;
+  stroke: #2b211d;
+  stroke-width: 4;
+  stroke-linejoin: round;
+}
+
+.soft-bear-scope-glass {
+  fill: #d9f1ed;
+  stroke: #7bc8b6;
+  stroke-width: 3;
+}
+
+.soft-bear-main .soft-bear-mouth-over {
+  display: none;
+}
+
+.bear-state-card[data-bear-mood="over"] .soft-bear-mouth-smile {
+  display: none;
+}
+
+.bear-state-card[data-bear-mood="over"] .soft-bear-mouth-over {
+  display: block;
+}
+
+.bear-state-card[data-bear-mood="over"] .soft-bear-brow-left {
+  transform: rotate(-8deg);
+  transform-origin: 100px 76px;
+}
+
+.bear-state-card[data-bear-mood="over"] .soft-bear-brow-right {
+  transform: rotate(8deg);
+  transform-origin: 140px 76px;
+}
+
+.bear-state-card[data-bear-mood="done"] .soft-bear-badge,
+.bear-state-card[data-bear-mood="move"] .soft-bear-badge {
+  filter: drop-shadow(0 0 8px rgba(123, 200, 182, 0.48));
+}
+
+.soft-bear-sport .soft-bear-arm-left,
+.soft-bear-sport .soft-bear-arm-right {
+  animation: bearWave 2.4s ease-in-out infinite;
+  transform-origin: 112px 128px;
+}
+
 .tabs {
   grid-template-columns: repeat(5, minmax(0, 1fr));
 }
@@ -2184,11 +2351,15 @@ button:disabled {
 
 .bear-state-card .hero-companion {
   position: static;
-  width: clamp(112px, 22vw, 176px);
+  width: clamp(150px, 25vw, 220px);
   height: auto;
 }
 
-.bear-state-card .bear-mascot {
+.bear-state-card .bear-mascot,
+.bear-portrait-card .soft-bear,
+.food-plate-bear .soft-bear,
+.exercise-bear .soft-bear,
+.trend-bear .soft-bear {
   filter: drop-shadow(0 16px 20px rgba(122, 80, 48, 0.16));
 }
 
@@ -2543,11 +2714,19 @@ button:disabled {
   display: grid;
   min-height: 170px;
   place-items: center;
+  justify-items: center;
+  gap: 6px;
   border: 1px solid rgba(217, 228, 223, 0.9);
   border-radius: var(--radius);
   background:
     radial-gradient(circle at 50% 72%, rgba(15, 118, 110, 0.13), transparent 32%),
     linear-gradient(180deg, rgba(255, 247, 223, 0.82), rgba(255, 255, 255, 0.72));
+}
+
+.food-plate-bear span {
+  color: #064e47;
+  font-size: 13px;
+  font-weight: 850;
 }
 
 .mini-bear-face,
@@ -2616,7 +2795,7 @@ button:disabled {
 }
 
 .trend-hero-panel {
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) 170px minmax(240px, 0.72fr);
 }
 
 .trend-range-tabs {
@@ -2724,7 +2903,7 @@ button:disabled {
   }
 
   .bear-state-card .hero-companion {
-    width: 110px;
+    width: 124px;
   }
 
   .bear-balance-ring {
