@@ -1,6 +1,6 @@
 const STORAGE_KEY = "metabolic-tracker-v1";
 const AUTH_STORAGE_KEY = "metabolic-tracker-auth-v1";
-const APP_VERSION = "2026-06-30-dashscope-workspace";
+const APP_VERSION = "2026-06-30-ai-json-repair";
 
 const BUILTIN_FOODS = [
   { name: "米饭（熟）", kcal100: 116, protein100: 2.6, carbs100: 25.9, fat100: 0.3 },

@@ -6,7 +6,7 @@ const DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1";
 const DEFAULT_DASHSCOPE_MODEL = "qwen-vl-plus";
 const DEFAULT_DASHSCOPE_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1";
 const DEFAULT_DASHSCOPE_REGION = "cn-beijing";
-const RECOGNIZE_FOOD_VERSION = "2026-06-30-dashscope-workspace";
+const RECOGNIZE_FOOD_VERSION = "2026-06-30-ai-json-repair";
 
 const foodResultSchema = {
   type: "object",
@@ -383,18 +383,159 @@ function extractResponseText(data) {
 
 function parseResponseJson(text) {
   if (!text) return { items: [] };
-  const cleaned = String(text)
-    .replace(/^```(?:json)?/i, "")
-    .replace(/```$/i, "")
-    .trim();
-  try {
-    return normalizeParsedObject(JSON.parse(cleaned));
-  } catch {
-    const start = cleaned.indexOf("{");
-    const end = cleaned.lastIndexOf("}");
-    if (start >= 0 && end > start) return normalizeParsedObject(JSON.parse(cleaned.slice(start, end + 1)));
-    return { items: [] };
+  const cleaned = stripJsonFence(text);
+  const candidates = [cleaned, extractJsonObjectText(cleaned), extractJsonArrayAsItemsText(cleaned)].filter(Boolean);
+  for (const candidate of candidates) {
+    const parsed = tryParseRecognizedJson(candidate);
+    if (parsed) return parsed;
   }
+  const salvaged = salvageItemsFromJsonLikeText(cleaned);
+  if (salvaged.items.length) return salvaged;
+  throw httpError(
+    422,
+    "AI 返回的食物结果不是完整 JSON。我已拦截原始解析报错，请重新点一次识别，或换一张更清晰的照片。",
+    "ai_json_parse_error",
+    cleaned.slice(0, 500)
+  );
+}
+
+function stripJsonFence(text) {
+  return String(text)
+    .replace(/^\s*```(?:json)?/i, "")
+    .replace(/```\s*$/i, "")
+    .trim();
+}
+
+function extractJsonObjectText(text) {
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  return start >= 0 && end > start ? text.slice(start, end + 1) : "";
+}
+
+function extractJsonArrayAsItemsText(text) {
+  const start = text.indexOf("[");
+  const end = text.lastIndexOf("]");
+  return start >= 0 && end > start ? `{"items":${text.slice(start, end + 1)}}` : "";
+}
+
+function tryParseRecognizedJson(text) {
+  const variants = [text, repairJsonLikeText(text)];
+  for (const variant of variants) {
+    try {
+      return normalizeParsedObject(JSON.parse(variant));
+    } catch {
+      // Try the next repair variant.
+    }
+  }
+  return null;
+}
+
+function repairJsonLikeText(text) {
+  return String(text)
+    .replace(/^\uFEFF/, "")
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .replace(/,\s*([}\]])/g, "$1")
+    .replace(/}\s*{/g, "},{");
+}
+
+function salvageItemsFromJsonLikeText(text) {
+  const arrayText = extractItemsArrayText(text) || extractTopLevelArrayText(text);
+  if (!arrayText) return { items: [] };
+  const items = collectBalancedObjects(arrayText)
+    .map((itemText) => tryParseJsonObject(itemText))
+    .filter(Boolean);
+  return { items };
+}
+
+function extractItemsArrayText(text) {
+  const match = /"?items"?\s*:\s*\[/i.exec(text);
+  if (!match) return "";
+  const start = match.index + match[0].lastIndexOf("[");
+  const end = findMatchingBracket(text, start, "[", "]");
+  return end > start ? text.slice(start, end + 1) : "";
+}
+
+function extractTopLevelArrayText(text) {
+  const start = text.indexOf("[");
+  const end = start >= 0 ? findMatchingBracket(text, start, "[", "]") : -1;
+  return end > start ? text.slice(start, end + 1) : "";
+}
+
+function findMatchingBracket(text, start, openChar, closeChar) {
+  let depth = 0;
+  let quoted = false;
+  let escaped = false;
+  for (let index = start; index < text.length; index += 1) {
+    const char = text[index];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (char === "\\") {
+      escaped = quoted;
+      continue;
+    }
+    if (char === '"') {
+      quoted = !quoted;
+      continue;
+    }
+    if (quoted) continue;
+    if (char === openChar) depth += 1;
+    if (char === closeChar) {
+      depth -= 1;
+      if (depth === 0) return index;
+    }
+  }
+  return -1;
+}
+
+function collectBalancedObjects(text) {
+  const objects = [];
+  let start = -1;
+  let depth = 0;
+  let quoted = false;
+  let escaped = false;
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (char === "\\") {
+      escaped = quoted;
+      continue;
+    }
+    if (char === '"') {
+      quoted = !quoted;
+      continue;
+    }
+    if (quoted) continue;
+    if (char === "{") {
+      if (depth === 0) start = index;
+      depth += 1;
+    } else if (char === "}") {
+      depth -= 1;
+      if (depth === 0 && start >= 0) {
+        objects.push(text.slice(start, index + 1));
+        start = -1;
+      }
+    }
+  }
+  return objects;
+}
+
+function tryParseJsonObject(text) {
+  const variants = [text, repairJsonLikeText(text)];
+  for (const variant of variants) {
+    try {
+      const parsed = JSON.parse(variant);
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : null;
+    } catch {
+      // Try the next repair variant.
+    }
+  }
+  return null;
 }
 
 function normalizeParsedObject(value) {
