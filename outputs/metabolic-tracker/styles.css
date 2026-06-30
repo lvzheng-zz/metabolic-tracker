@@ -2119,6 +2119,33 @@ button:disabled {
 }
 
 /* Bear app refresh */
+.bear-mascot .soft-bear,
+.food-plate-bear .soft-bear,
+.exercise-bear .soft-bear,
+.trend-bear .soft-bear {
+  display: none;
+}
+
+.bear-reference-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 16px 20px rgba(122, 80, 48, 0.16));
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.bear-reference-hero {
+  max-width: 250px;
+}
+
+.bear-reference-card {
+  width: min(100%, 174px);
+  max-height: 178px;
+  margin: 0 auto;
+}
+
 .soft-bear {
   display: block;
   width: 100%;
@@ -2351,7 +2378,7 @@ button:disabled {
 
 .bear-state-card .hero-companion {
   position: static;
-  width: clamp(150px, 25vw, 220px);
+  width: clamp(156px, 27vw, 250px);
   height: auto;
 }
 
@@ -2903,7 +2930,7 @@ button:disabled {
   }
 
   .bear-state-card .hero-companion {
-    width: 124px;
+    width: 146px;
   }
 
   .bear-balance-ring {

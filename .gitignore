@@ -10,6 +10,7 @@ outputs/**/.metabolic-tracker-data/
 outputs/aliyun-oneclick/
 outputs/*.zip
 outputs/agent-skill-package/
+outputs/metabolic-tracker/assets/bears/preview-sheet.jpg
 
 # Environment files and logs
 .env
