@@ -1,6 +1,6 @@
 const STORAGE_KEY = "metabolic-tracker-v1";
 const AUTH_STORAGE_KEY = "metabolic-tracker-auth-v1";
-const APP_VERSION = "2026-06-30-reference-bear";
+const APP_VERSION = "2026-07-01-bear-assets";
 const BEAR_ASSETS = {
   ready: "bear-hero.png",
   normal: "bear-hero.png",
@@ -10,6 +10,10 @@ const BEAR_ASSETS = {
   done: "bear-happy.png",
   move: "bear-sport.png"
 };
+
+function bearAssetUrl(fileName) {
+  return `./assets/bears/${fileName}?v=${APP_VERSION}`;
+}
 
 const BUILTIN_FOODS = [
   { name: "米饭（熟）", kcal100: 116, protein100: 2.6, carbs100: 25.9, fat100: 0.3 },
@@ -878,7 +882,7 @@ function renderDashboard() {
   const stateCard = $("#bearStateCard");
   if (stateCard) stateCard.dataset.bearMood = bearState.mood;
   const bearImage = $("#bearMascotImage");
-  if (bearImage) bearImage.src = `./assets/bears/${BEAR_ASSETS[bearState.mood] || BEAR_ASSETS.ready}`;
+  if (bearImage) bearImage.src = bearAssetUrl(BEAR_ASSETS[bearState.mood] || BEAR_ASSETS.ready);
   const moodTitle = $("#bearMoodTitle");
   const moodText = $("#bearMoodText");
   if (moodTitle) moodTitle.textContent = bearState.title;
