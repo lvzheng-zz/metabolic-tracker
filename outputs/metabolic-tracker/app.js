@@ -1,6 +1,6 @@
 const STORAGE_KEY = "metabolic-tracker-v1";
 const AUTH_STORAGE_KEY = "metabolic-tracker-auth-v1";
-const APP_VERSION = "2026-06-30-login-sync-fix";
+const APP_VERSION = "2026-06-30-profile-page";
 
 const BUILTIN_FOODS = [
   { name: "米饭（熟）", kcal100: 116, protein100: 2.6, carbs100: 25.9, fat100: 0.3 },
@@ -765,33 +765,34 @@ function profileIsComplete() {
 function renderProfileSummary() {
   const name = $("#profileName");
   const summary = $("#profileSummary");
-  if (!name || !summary) return;
   const height = toNumber(state.settings.height);
   const targetWeight = toNumber(state.settings.targetWeight);
   const target = baseTarget();
-  name.textContent = profileIsComplete() ? "我的档案" : "个人中心";
   const parts = [];
   if (height) parts.push(`${height}cm`);
   if (targetWeight) parts.push(`目标 ${targetWeight}kg`);
   if (target) parts.push(`${Math.round(target)} kcal`);
-  summary.textContent = parts.length ? parts.join(" · ") : "未设置";
+  if (name && summary) {
+    name.textContent = profileIsComplete() ? "我的档案" : "个人中心";
+    summary.textContent = parts.length ? parts.join(" · ") : "未设置";
+  }
+
+  const account = $("#profileAccountState");
+  const targetState = $("#profileTargetState");
+  const weightState = $("#profileWeightState");
+  if (account) account.textContent = authState.token ? `已登录 ${authState.username || "账号"}` : "未登录";
+  if (targetState) targetState.textContent = target ? formatKcal(target) : "未设置";
+  if (weightState) {
+    const weight = currentWeight();
+    weightState.textContent = weight ? formatUnit(weight, "kg", 1) : "未记录";
+  }
 }
 
 function openProfileCenter() {
-  const modal = $("#profileModal");
-  if (!modal) return;
   renderSettingsForm();
   const status = $("#settingsStatus");
   if (status) status.textContent = "";
-  modal.hidden = false;
-  $("#profileButton")?.setAttribute("aria-expanded", "true");
-}
-
-function closeProfileCenter() {
-  const modal = $("#profileModal");
-  if (!modal) return;
-  modal.hidden = true;
-  $("#profileButton")?.setAttribute("aria-expanded", "false");
+  setView("profile");
 }
 
 function openCheckupModal() {
@@ -3186,18 +3187,12 @@ function bindEvents() {
   });
 
   $("#profileButton").addEventListener("click", openProfileCenter);
-  $("#profileClose").addEventListener("click", closeProfileCenter);
-  $("#profileShortcut").addEventListener("click", openProfileCenter);
   $("#checkupButton").addEventListener("click", openCheckupModal);
   $("#checkupClose").addEventListener("click", closeCheckupModal);
-  $("#profileModal").addEventListener("click", (event) => {
-    if (event.target === event.currentTarget) closeProfileCenter();
-  });
   $("#checkupModal").addEventListener("click", (event) => {
     if (event.target === event.currentTarget) closeCheckupModal();
   });
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && !$("#profileModal").hidden) closeProfileCenter();
     if (event.key === "Escape" && !$("#checkupModal").hidden) closeCheckupModal();
   });
 
@@ -3272,7 +3267,6 @@ function bindEvents() {
     deleteEntry(button.dataset.type, button.dataset.id);
   });
 
-  $("#exportTop").addEventListener("click", exportState);
   $("#exportData").addEventListener("click", exportState);
   $("#importData").addEventListener("change", (event) => importState(event.target.files[0]));
   $("#deviceImportFile").addEventListener("change", (event) => {
