@@ -1,6 +1,6 @@
 const STORAGE_KEY = "metabolic-tracker-v1";
 const AUTH_STORAGE_KEY = "metabolic-tracker-auth-v1";
-const APP_VERSION = "2026-06-30-health-auto-sync";
+const APP_VERSION = "2026-06-30-login-sync-fix";
 
 const BUILTIN_FOODS = [
   { name: "米饭（熟）", kcal100: 116, protein100: 2.6, carbs100: 25.9, fat100: 0.3 },
@@ -2238,6 +2238,35 @@ function remoteStateFromResponse(data) {
   return data;
 }
 
+function hasCloudStateData(remoteState) {
+  return Boolean(
+    remoteState &&
+      (remoteState.settings ||
+        remoteState.customFoods ||
+        remoteState.foodEntries ||
+        remoteState.bodyEntries ||
+        remoteState.exerciseEntries ||
+        remoteState.supplementItems ||
+        remoteState.supplementLogs ||
+        remoteState.supplementWorkoutDates)
+  );
+}
+
+function cloudStorageWarning(data) {
+  if (data?.storage?.durable === false) {
+    return " 当前云端仍是临时存储，函数重启后可能丢失；稳定多端需要配置 OSS。";
+  }
+  return "";
+}
+
+async function syncCurrentDeviceToCloud() {
+  await mergeRemoteBeforePush();
+  return cloudRequest("/sync", {
+    method: "PUT",
+    body: JSON.stringify({ state: cloudStatePayload() })
+  });
+}
+
 async function loginCloudSync() {
   try {
     saveCloudEndpoint();
@@ -2253,7 +2282,9 @@ async function loginCloudSync() {
     saveAuthState({ token: data.token, username, savedAt: new Date().toISOString() });
     const passwordInput = $("#cloudPassword");
     if (passwordInput) passwordInput.value = "";
-    setCloudSyncStatus("已登录。之后保存记录会自动上传，也可以手动上传当前数据。");
+    setCloudSyncStatus("正在合并本机和云端数据...");
+    const syncData = await syncCurrentDeviceToCloud();
+    setCloudSyncStatus(`已登录并同步。本机记录已上传，其他设备登录后会自动合并。${cloudStorageWarning(syncData)}`);
   } catch (error) {
     setCloudSyncStatus(error.message || "云端登录失败。", "error");
   }
@@ -2266,12 +2297,10 @@ async function pushCloudState({ silent = false } = {}) {
   }
   try {
     if (!silent) setCloudSyncStatus("正在上传当前数据...");
-    await mergeRemoteBeforePush();
-    await cloudRequest("/sync", {
-      method: "PUT",
-      body: JSON.stringify({ state: cloudStatePayload() })
-    });
-    setCloudSyncStatus(`已同步到云端：${new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}`);
+    const data = await syncCurrentDeviceToCloud();
+    setCloudSyncStatus(
+      `已同步到云端：${new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}${cloudStorageWarning(data)}`
+    );
   } catch (error) {
     setCloudSyncStatus(error.message || "上传失败。", "error");
   }
@@ -2280,11 +2309,12 @@ async function pushCloudState({ silent = false } = {}) {
 async function mergeRemoteBeforePush() {
   const data = await cloudRequest("/sync", { method: "GET" });
   const remoteState = remoteStateFromResponse(data);
-  if (!remoteState || (!remoteState.settings && !remoteState.foodEntries && !remoteState.bodyEntries && !remoteState.exerciseEntries)) return;
+  if (!hasCloudStateData(remoteState)) return data;
   applyImportedState({ ...remoteState, type: "metabolic-tracker-merge", mode: "merge" });
   saveState({ skipCloudSync: true });
   fillFoodDatalist();
   renderAll();
+  return data;
 }
 
 async function pullCloudState() {
@@ -2296,15 +2326,15 @@ async function pullCloudState() {
     setCloudSyncStatus("正在拉取云端数据...");
     const data = await cloudRequest("/sync", { method: "GET" });
     const remoteState = remoteStateFromResponse(data);
-    if (!remoteState || (!remoteState.settings && !remoteState.foodEntries && !remoteState.bodyEntries && !remoteState.exerciseEntries)) {
-      setCloudSyncStatus("云端暂无可合并的数据。");
+    if (!hasCloudStateData(remoteState)) {
+      setCloudSyncStatus(`云端暂无可合并的数据。${cloudStorageWarning(data)}`);
       return;
     }
     applyImportedState({ ...remoteState, type: "metabolic-tracker-merge", mode: "merge" });
     saveState({ skipCloudSync: true });
     fillFoodDatalist();
     renderAll();
-    setCloudSyncStatus("已从云端合并到本机。");
+    setCloudSyncStatus(`已从云端合并到本机。${cloudStorageWarning(data)}`);
   } catch (error) {
     setCloudSyncStatus(error.message || "拉取失败。", "error");
   }
@@ -2365,6 +2395,14 @@ function scheduleCloudAutoSync() {
   cloudSyncTimer = setTimeout(() => {
     pushCloudState({ silent: true });
   }, 1200);
+}
+
+function syncLoggedInDeviceOnStart() {
+  if (!authState.token) return;
+  window.setTimeout(() => {
+    setCloudSyncStatus("正在同步本机和云端...");
+    pushCloudState({ silent: true });
+  }, 600);
 }
 
 function exportState() {
@@ -3263,6 +3301,7 @@ function init() {
   resetSupplementForm();
   startSupplementReminderLoop();
   renderAll();
+  syncLoggedInDeviceOnStart();
 }
 
 init();

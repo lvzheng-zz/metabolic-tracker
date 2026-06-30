@@ -113,7 +113,7 @@ async function syncState(req, res) {
   try {
     if (req.method === "GET") {
       const state = await readCloudState(user.username);
-      sendJson(res, 200, { state });
+      sendJson(res, 200, { state, storage: cloudStorageInfo(), accountMode: "single" });
       return;
     }
 
@@ -135,7 +135,7 @@ async function syncState(req, res) {
       }
 
       await writeCloudState(user.username, serialized);
-      sendJson(res, 200, { ok: true });
+      sendJson(res, 200, { ok: true, storage: cloudStorageInfo(), accountMode: "single" });
       return;
     }
 
@@ -158,7 +158,9 @@ async function importHealthData(req, res) {
       ok: true,
       endpoint: "/api/health/import",
       accepts: ["date", "weight", "bodyFat", "sleepHours", "exerciseMinutes", "exerciseKcal", "workouts"],
-      auth: process.env.APP_HEALTH_IMPORT_TOKEN ? "X-Health-Import-Token or Authorization" : "Authorization"
+      auth: process.env.APP_HEALTH_IMPORT_TOKEN ? "X-Health-Import-Token or Authorization" : "Authorization",
+      storage: cloudStorageInfo(),
+      accountMode: "single"
     });
     return;
   }
@@ -204,7 +206,9 @@ async function importHealthData(req, res) {
       source: imported.source,
       bodyCount,
       exerciseCount,
-      updatedAt: nextState.updatedAt
+      updatedAt: nextState.updatedAt,
+      storage: cloudStorageInfo(),
+      accountMode: "single"
     });
   } catch (error) {
     sendJson(res, 500, { error: error.message || "Health import failed" });
@@ -233,6 +237,21 @@ function setCorsHeaders(res, methods = "GET, PUT, POST, OPTIONS") {
 
 function sendJson(res, status, data) {
   res.status(status).json(data);
+}
+
+function cloudStorageInfo() {
+  if (process.env.OSS_BUCKET) {
+    return {
+      type: "oss",
+      durable: true,
+      bucket: process.env.OSS_BUCKET,
+      region: process.env.OSS_REGION || ""
+    };
+  }
+  return {
+    type: "local-temp",
+    durable: false
+  };
 }
 
 async function readJsonBody(req) {

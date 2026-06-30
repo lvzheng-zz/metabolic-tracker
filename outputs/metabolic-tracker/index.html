@@ -7,7 +7,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="减脂记录" />
     <title>代谢减脂记录</title>
-    <link rel="stylesheet" href="./styles.css?v=20260630-health-auto-sync" />
+    <link rel="stylesheet" href="./styles.css?v=20260630-login-sync-fix" />
   </head>
   <body>
     <div class="app-shell">
@@ -894,7 +894,7 @@
                 </button>
               </div>
               <p id="cloudSyncStatus" class="save-status" aria-live="polite"></p>
-              <p class="cloud-sync-meta">登录后，每次保存记录会自动上传；新设备先登录，再点“拉取云端”合并数据。</p>
+              <p class="cloud-sync-meta">登录会自动合并本机和云端；未登录时记录的数据会在登录后上传。当前是单账号模式。</p>
             </div>
             <div class="device-link-box">
               <div class="panel-head compact-head">
@@ -989,6 +989,6 @@
       </article>
     </template>
 
-    <script src="./app.js?v=20260630-health-auto-sync"></script>
+    <script src="./app.js?v=20260630-login-sync-fix"></script>
   </body>
 </html>
