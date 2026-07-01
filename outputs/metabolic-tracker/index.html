@@ -7,18 +7,18 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="减脂记录" />
     <title>代谢减脂记录</title>
-    <link rel="stylesheet" href="./styles.css?v=2026-07-01-bear-feedback" />
+    <link rel="stylesheet" href="./styles.css?v=2026-07-01-app-shell" />
   </head>
   <body>
-    <div class="app-shell">
+    <div class="app-shell" data-current-view="dashboard">
       <header class="topbar">
         <div class="brand">
           <div class="brand-mark" aria-hidden="true">
             <span class="icon" data-icon="activity"></span>
           </div>
           <div>
-            <h1>代谢减脂记录</h1>
-            <p>饮食、身体、运动联动台账</p>
+            <h1 id="appTitle">今天的我</h1>
+            <p id="appSubtitle">记录饮食、运动和身体状态</p>
           </div>
           <button id="profileButton" class="profile-button" type="button">
             <span class="icon" data-icon="user"></span>
@@ -49,52 +49,24 @@
           <span class="icon" data-icon="bike"></span>
           <span>运动</span>
         </button>
+        <button class="tab" type="button" data-view="body">
+          <span class="icon" data-icon="scale"></span>
+          <span>身体</span>
+        </button>
         <button class="tab" type="button" data-view="trends">
           <span class="icon" data-icon="chart-line"></span>
           <span>趋势</span>
         </button>
-        <button class="tab" type="button" data-view="profile">
-          <span class="icon" data-icon="user"></span>
-          <span>我的</span>
-        </button>
       </nav>
-
-      <div class="quick-fab-wrap">
-        <button id="quickFab" class="quick-fab" type="button" aria-expanded="false" aria-controls="quickActionSheet" title="快捷记录">
-          <span class="icon" data-icon="plus"></span>
-        </button>
-        <div id="quickActionSheet" class="quick-action-sheet" hidden>
-          <button type="button" data-quick-jump="food">
-            <span class="icon" data-icon="utensils"></span>
-            <span>记一餐</span>
-          </button>
-          <button type="button" data-quick-jump="body">
-            <span class="icon" data-icon="scale"></span>
-            <span>记体重</span>
-          </button>
-          <button type="button" data-quick-jump="exercise">
-            <span class="icon" data-icon="bike"></span>
-            <span>记运动</span>
-          </button>
-          <button type="button" data-quick-jump="body">
-            <span class="icon" data-icon="pill"></span>
-            <span>打卡补剂</span>
-          </button>
-          <button type="button" data-quick-jump="food" data-food-action="photo">
-            <span class="icon" data-icon="camera"></span>
-            <span>拍照识别</span>
-          </button>
-        </div>
-      </div>
 
       <main>
         <section id="dashboard" class="view is-active">
           <div class="dashboard-grid">
             <section class="panel hero-panel bear-state-card" id="bearStateCard" data-bear-mood="ready">
               <div class="bear-state-copy">
-                <p class="eyebrow">今日小熊状态</p>
-                <h2 id="bearMoodTitle">准备开始新的一天</h2>
-                <p id="bearMoodText">先记一餐，小熊就能帮你看今天怎么调整。</p>
+                <p class="eyebrow">今天的我</p>
+                <h2 id="bearMoodTitle">我准备开始新的一天</h2>
+                <p id="bearMoodText">我今天还没开始记录，先记一餐就好。</p>
               </div>
               <div class="bear-state-main">
                 <div class="balance-ring bear-balance-ring" id="balanceRing" aria-label="今日热量余量">
@@ -103,7 +75,7 @@
                 </div>
                 <div class="hero-companion" aria-hidden="true">
                   <div class="bear-mascot">
-                    <img id="bearMascotImage" class="bear-reference-img bear-reference-hero" src="./assets/bears/bear-hero.png?v=2026-07-01-bear-feedback" alt="" />
+                    <img id="bearMascotImage" class="bear-reference-img bear-reference-hero" src="./assets/bears/bear-hero.png?v=2026-07-01-app-shell" alt="" />
                     <svg class="soft-bear soft-bear-main" viewBox="0 0 240 260" role="img">
                       <ellipse class="soft-bear-shadow" cx="122" cy="238" rx="74" ry="14"></ellipse>
                       <ellipse class="soft-bear-body" cx="122" cy="166" rx="62" ry="72"></ellipse>
@@ -138,20 +110,20 @@
                 </div>
               </div>
               <div class="today-core-grid">
-                <div>
-                  <span>今日预算</span>
+                <div class="today-metric">
+                  <span>今天还可以吃</span>
                   <strong id="budgetTitle">-- kcal</strong>
                 </div>
-                <div>
-                  <span>已摄入</span>
+                <div class="today-metric">
+                  <span>已记录</span>
                   <strong id="todayFoodKcal">--</strong>
                 </div>
-                <div>
+                <div class="today-metric">
                   <span>运动抵扣</span>
                   <strong id="todayExerciseKcal">--</strong>
                 </div>
-                <div>
-                  <span>净摄入</span>
+                <div class="today-metric">
+                  <span>当前净摄入</span>
                   <strong id="todayNetKcal">--</strong>
                 </div>
               </div>
@@ -175,13 +147,8 @@
               <div class="quick-record-grid">
                 <button class="quick-record-button" type="button" data-quick-jump="food">
                   <span class="icon" data-icon="utensils"></span>
-                  <strong>记饮食</strong>
+                  <strong>记一餐</strong>
                   <small>拍照或手动</small>
-                </button>
-                <button class="quick-record-button" type="button" data-quick-jump="body">
-                  <span class="icon" data-icon="scale"></span>
-                  <strong>记体重</strong>
-                  <small>睡眠/用药一起记</small>
                 </button>
                 <button class="quick-record-button" type="button" data-quick-jump="exercise">
                   <span class="icon" data-icon="bike"></span>
@@ -189,14 +156,14 @@
                   <small>快走/骑车/力量</small>
                 </button>
                 <button class="quick-record-button" type="button" data-quick-jump="body">
-                  <span class="icon" data-icon="pill"></span>
-                  <strong>打卡补剂</strong>
-                  <small>今日用药补剂</small>
+                  <span class="icon" data-icon="scale"></span>
+                  <strong>记录身体</strong>
+                  <small>体重/睡眠/项目</small>
                 </button>
               </div>
             </section>
 
-            <section class="panel month-rings-panel">
+            <section class="panel month-rings-panel" hidden>
               <div class="panel-head month-rings-head">
                 <div>
                   <p class="eyebrow">月度圆环</p>
@@ -215,7 +182,7 @@
               <div id="monthRingsGrid" class="month-rings-grid" aria-label="月度进度圆环"></div>
             </section>
 
-            <section class="panel daily-goals-panel">
+            <section class="panel daily-goals-panel" hidden>
               <div class="panel-head">
                 <div>
                   <p class="eyebrow">今日推荐</p>
@@ -254,7 +221,7 @@
               </div>
             </section>
 
-            <section class="panel weekly-goals-panel">
+            <section class="panel weekly-goals-panel" hidden>
               <div class="panel-head">
                 <div>
                   <p class="eyebrow">本周目标</p>
@@ -288,10 +255,6 @@
                   <p class="eyebrow">今日用药/补剂</p>
                   <h2 id="supplementSummaryTitle">--</h2>
                 </div>
-                <button class="ghost-button" type="button" data-jump="body">
-                  <span class="icon" data-icon="pill"></span>
-                  <span>管理</span>
-                </button>
               </div>
               <div class="supplement-progress">
                 <div class="meter" aria-hidden="true">
@@ -299,13 +262,12 @@
                 </div>
                 <span id="supplementSummaryText">--</span>
               </div>
-              <div id="dashboardSupplementList" class="supplement-mini-list"></div>
             </section>
 
-            <section class="panel coach-panel">
+            <section class="panel coach-panel" hidden>
               <div class="panel-head">
                 <div>
-                  <p class="eyebrow">小熊建议</p>
+                  <p class="eyebrow">今日建议</p>
                   <h2>今天可以这样做</h2>
                 </div>
               </div>
@@ -318,10 +280,6 @@
                   <p class="eyebrow">身体状态</p>
                   <h2>最新记录</h2>
                 </div>
-                <button class="ghost-button" type="button" data-jump="body">
-                  <span class="icon" data-icon="plus"></span>
-                  <span>添加</span>
-                </button>
               </div>
               <div class="metrics-grid">
                 <div>
@@ -343,7 +301,7 @@
               </div>
             </section>
 
-            <section class="panel today-detail-panel">
+            <section class="panel today-detail-panel" hidden>
               <div class="panel-head">
                 <div>
                   <p class="eyebrow">今日明细</p>
@@ -360,10 +318,10 @@
             <div class="food-plate-copy">
               <p class="eyebrow">今日餐盘</p>
               <h2 id="foodPlateKcal">0 / 1800 kcal</h2>
-              <p>小熊先看总热量，再帮你补蛋白、控饮料和外卖。</p>
+              <p>我先看总热量，再补蛋白、控饮料和外卖。</p>
             </div>
             <div class="food-plate-bear" aria-hidden="true">
-              <img class="bear-reference-img bear-reference-card" src="./assets/bears/bear-ready.png?v=2026-07-01-bear-feedback" alt="" />
+              <img class="bear-reference-img bear-reference-card" src="./assets/bears/bear-ready.png?v=2026-07-01-app-shell" alt="" />
               <svg class="soft-bear soft-bear-card soft-bear-food" viewBox="0 0 220 220">
                 <ellipse class="soft-bear-shadow" cx="112" cy="204" rx="58" ry="11"></ellipse>
                 <ellipse class="soft-bear-body" cx="112" cy="136" rx="50" ry="57"></ellipse>
@@ -570,8 +528,8 @@
             <section class="panel">
               <div class="panel-head">
                 <div>
-                  <p class="eyebrow">每日记录</p>
-                  <h2>体重、睡眠、用药</h2>
+                  <p class="eyebrow">体重 / 睡眠</p>
+                  <h2>记录今天的身体基础状态</h2>
                 </div>
               </div>
               <form id="bodyForm" class="form-grid">
@@ -605,7 +563,7 @@
             <section class="panel supplement-body-panel">
               <div class="panel-head">
                 <div>
-                  <p class="eyebrow">用药/补剂</p>
+                  <p class="eyebrow">每日项目 / 补剂打卡</p>
                   <h2 id="supplementDayTitle">--</h2>
                 </div>
                 <button id="toggleWorkoutDay" class="ghost-button" type="button">
@@ -782,8 +740,8 @@
             <section class="panel">
               <div class="panel-head">
                 <div>
-                  <p class="eyebrow">近期身体</p>
-                  <h2>记录列表</h2>
+                  <p class="eyebrow">身体状态</p>
+                  <h2>近期记录</h2>
                 </div>
                 <button id="checkupButton" class="ghost-button" type="button">
                   <span class="icon" data-icon="plus"></span>
@@ -800,10 +758,10 @@
             <div>
               <p class="eyebrow">今日运动</p>
               <h2 id="exerciseProgressTitle">0 / 150 min</h2>
-              <p id="exerciseProgressText">今天还没动，小熊还在沙发上。</p>
+              <p id="exerciseProgressText">我今天还没动，先安排一点轻活动。</p>
             </div>
             <div class="exercise-bear" aria-hidden="true">
-              <img class="bear-reference-img bear-reference-card" src="./assets/bears/bear-sport.png?v=2026-07-01-bear-feedback" alt="" />
+              <img class="bear-reference-img bear-reference-card" src="./assets/bears/bear-sport.png?v=2026-07-01-app-shell" alt="" />
               <svg class="soft-bear soft-bear-card soft-bear-sport" viewBox="0 0 220 220">
                 <ellipse class="soft-bear-shadow" cx="112" cy="204" rx="58" ry="11"></ellipse>
                 <ellipse class="soft-bear-body" cx="112" cy="137" rx="50" ry="57"></ellipse>
@@ -920,11 +878,11 @@
           <section class="panel trend-hero-panel">
             <div>
               <p class="eyebrow">趋势观察</p>
-              <h2>小熊拿着望远镜看变化</h2>
-              <p id="trendCoachText">连续记录 3 天后，小熊会更容易看出节奏。</p>
+              <h2>我在看最近的变化</h2>
+              <p id="trendCoachText">连续记录 3 天后，我会更容易看出节奏。</p>
             </div>
             <div class="trend-bear" aria-hidden="true">
-              <img class="bear-reference-img bear-reference-card" src="./assets/bears/bear-happy.png?v=2026-07-01-bear-feedback" alt="" />
+              <img class="bear-reference-img bear-reference-card" src="./assets/bears/bear-happy.png?v=2026-07-01-app-shell" alt="" />
               <svg class="soft-bear soft-bear-card soft-bear-trend" viewBox="0 0 220 220">
                 <ellipse class="soft-bear-shadow" cx="112" cy="204" rx="58" ry="11"></ellipse>
                 <ellipse class="soft-bear-body" cx="112" cy="137" rx="50" ry="57"></ellipse>
@@ -1003,7 +961,7 @@
                   <strong id="weekBalance">--</strong>
                 </div>
               </div>
-              <p id="weeklyCoachSummary" class="weekly-coach-summary">记录几天后，小熊会给你一段本周总结。</p>
+              <p id="weeklyCoachSummary" class="weekly-coach-summary">记录几天后，我会有一段本周总结。</p>
             </section>
           </div>
         </section>
@@ -1270,6 +1228,6 @@
 
     <div id="actionFeedback" class="action-feedback" aria-live="polite" hidden></div>
 
-    <script src="./app.js?v=2026-07-01-bear-feedback"></script>
+    <script src="./app.js?v=2026-07-01-app-shell"></script>
   </body>
 </html>

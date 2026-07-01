@@ -1,6 +1,6 @@
 const STORAGE_KEY = "metabolic-tracker-v1";
 const AUTH_STORAGE_KEY = "metabolic-tracker-auth-v1";
-const APP_VERSION = "2026-07-01-bear-feedback";
+const APP_VERSION = "2026-07-01-app-shell";
 const BEAR_ASSETS = {
   ready: "bear-hero.png",
   normal: "bear-hero.png",
@@ -16,6 +16,33 @@ const BEAR_ASSETS = {
 function bearAssetUrl(fileName) {
   return `./assets/bears/${fileName}?v=${APP_VERSION}`;
 }
+
+const PAGE_HEADERS = {
+  dashboard: {
+    title: "今天的我",
+    subtitle: "记录饮食、运动和身体状态"
+  },
+  food: {
+    title: "饮食",
+    subtitle: "记一餐，先估算，再慢慢修正"
+  },
+  exercise: {
+    title: "运动",
+    subtitle: "记录活动，计算今天的运动抵扣"
+  },
+  body: {
+    title: "身体",
+    subtitle: "体重、睡眠、身体状态和每日项目"
+  },
+  trends: {
+    title: "趋势",
+    subtitle: "看最近变化，不用每天纠结单点数字"
+  },
+  profile: {
+    title: "个人中心",
+    subtitle: "目标、同步、导入导出和高级设置"
+  }
+};
 
 const BUILTIN_FOODS = [
   { name: "米饭（熟）", kcal100: 116, protein100: 2.6, carbs100: 25.9, fat100: 0.3 },
@@ -724,11 +751,30 @@ function createIcon(name) {
   return span;
 }
 
-function setView(viewName) {
-  $$(".tab").forEach((tab) => tab.classList.toggle("is-active", tab.dataset.view === viewName));
-  $$(".view").forEach((view) => view.classList.toggle("is-active", view.id === viewName));
+function scrollAppToTop() {
+  const main = $("main");
+  if (main) main.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+}
+
+function updateAppHeader(viewName) {
+  const header = PAGE_HEADERS[viewName] || PAGE_HEADERS.dashboard;
+  const shell = $(".app-shell");
+  if (shell) shell.dataset.currentView = viewName;
+  const title = $("#appTitle");
+  const subtitle = $("#appSubtitle");
+  if (title) title.textContent = header.title;
+  if (subtitle) subtitle.textContent = header.subtitle;
+}
+
+function setView(viewName, options = {}) {
+  const targetView = $(`#${viewName}`) ? viewName : "dashboard";
+  $$(".tab").forEach((tab) => tab.classList.toggle("is-active", tab.dataset.view === targetView));
+  $$(".view").forEach((view) => view.classList.toggle("is-active", view.id === targetView));
+  updateAppHeader(targetView);
   closeQuickActions();
   renderAll();
+  if (options.scroll !== false) window.requestAnimationFrame(scrollAppToTop);
 }
 
 function toggleQuickActions() {
@@ -750,11 +796,7 @@ function closeQuickActions() {
 
 function jumpToRecord(viewName, options = {}) {
   setView(viewName);
-  if (options.photo) $("#foodPhotoInput")?.click();
-  window.setTimeout(() => {
-    const target = options.focus || (viewName === "food" ? "#foodForm" : viewName === "exercise" ? "#exerciseForm" : viewName === "body" ? "#bodyForm" : "");
-    if (target) $(target)?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, 80);
+  if (options.photo) window.setTimeout(() => $("#foodPhotoInput")?.click(), 0);
 }
 
 function handleQuickJump(button) {
@@ -867,7 +909,8 @@ function renderDashboard() {
   const summary = daySummary(date);
   const targets = dailyTargets(date);
   const supplements = supplementSummary(date);
-  $("#budgetTitle").textContent = formatKcal(summary.budget);
+  $("#budgetTitle").textContent =
+    summary.balance === null ? "--" : summary.balance >= 0 ? formatKcal(summary.balance) : `超出 ${formatKcal(Math.abs(summary.balance))}`;
   $("#todayFoodKcal").textContent = formatKcal(summary.food.kcal);
   $("#todayExerciseKcal").textContent = formatKcal(summary.exercise.credit);
   $("#todayNetKcal").textContent = formatKcal(summary.net);
@@ -921,55 +964,55 @@ function bearMoodForDay(summary, targets, supplements) {
   if (summary.budget && summary.food.kcal > summary.budget * 1.05) {
     return {
       mood: "over",
-      title: "小熊摸摸肚子",
-      text: "今天有点多，下一餐清淡一点，明天不用极端补偿。"
+      title: "我今天有点吃多了",
+      text: "下一餐清淡一点，明天不用极端补偿。"
     };
   }
   if (sleep !== null && sleep < 6) {
     return {
       mood: "rest",
-      title: "小熊先充会儿电",
+      title: "我今天有点没电",
       text: "睡眠偏少，今天先稳住饮食和轻活动，训练别硬顶。"
     };
   }
   if (summary.food.kcal === 0) {
     return {
       mood: "ready",
-      title: "小熊准备开工",
-      text: "今天还没饮食记录，先记早餐或午餐就好。"
+      title: "我准备开始记录",
+      text: "我今天还没开始记录，先记早餐或午餐就好。"
     };
   }
   if (targets.protein && summary.food.protein < targets.protein * 0.55) {
     return {
       mood: "protein",
-      title: "小熊想加点蛋白",
+      title: "我今天蛋白还不够",
       text: "优先补肉蛋奶豆，外卖先看主食、肉和饮料。"
     };
   }
   if (supplementDone >= supplements.total && supplements.total > 0) {
     return {
       mood: "checkin",
-      title: "小熊打卡完成",
+      title: "我今天打卡完成",
       text: "今天用药/补剂已经勾完，继续按自己的节奏来。"
     };
   }
   if (summary.exercise.minutes >= 150) {
     return {
       mood: "move",
-      title: "小熊运动达标",
+      title: "我今天动起来了",
       text: "运动完成，今天的活动量已经很漂亮，晚上注意恢复。"
     };
   }
   if (summary.exercise.minutes >= 20) {
     return {
       mood: "move",
-      title: "小熊已经动起来",
+      title: "我已经动起来了",
       text: "运动已记录，晚上按饥饿感微调摄入就好。"
     };
   }
   return {
     mood: "normal",
-    title: "小熊陪你稳住",
+    title: "我今天控制得不错",
     text: "今天有记录了，晚点补一次轻运动会更完整。"
   };
 }
@@ -1028,7 +1071,7 @@ function renderSuggestions(date) {
   } else if (summary.budget && summary.food.kcal > summary.budget * 1.05) {
     add("warn", "今天吃得有点多", "下一餐清淡一点、蛋白够一点，不需要明天极端少吃。", "①");
   } else {
-    add("info", "今天已经开始记录", "继续把主食、蛋白和饮料补全，小熊就能更准地帮你看余量。", "①");
+    add("info", "今天已经开始记录", "继续把主食、蛋白和饮料补全，我就能更准地看余量。", "①");
   }
 
   if (targets.protein && summary.food.protein < targets.protein * 0.75) {
@@ -1185,6 +1228,10 @@ function supplementItemNode(item, date, compact = false) {
   checkbox.dataset.supplementId = item.id;
   checkbox.dataset.date = date;
 
+  const circle = document.createElement("span");
+  circle.className = "check-circle";
+  circle.setAttribute("aria-hidden", "true");
+
   const body = document.createElement("span");
   body.className = "supplement-check-body";
   const title = document.createElement("strong");
@@ -1192,7 +1239,7 @@ function supplementItemNode(item, date, compact = false) {
   const detail = document.createElement("small");
   detail.textContent = supplementDetail(item);
   body.append(title, detail);
-  label.append(checkbox, body);
+  label.append(checkbox, circle, body);
   return label;
 }
 
@@ -1220,7 +1267,6 @@ function renderSupplementDashboard(date) {
     ? `${summary.taken} 项已打勾，${Math.max(0, summary.total - summary.taken)} 项待完成`
     : "到补剂页启用或新增计划";
   meter.style.width = `${Math.round(ratio * 100)}%`;
-  renderSupplementChecklist("dashboardSupplementList", date, true);
 }
 
 function renderReminderStatus() {
@@ -1618,10 +1664,10 @@ function renderExerciseView() {
   const hero = $("#exerciseHeroPanel");
   if (title) title.textContent = `${Math.round(total.minutes)} / 150 min`;
   if (text) {
-    if (total.minutes <= 0) text.textContent = "今天还没动，小熊还在沙发上。";
-    else if (total.minutes < 30) text.textContent = "小熊已经站起来了，再加一点就更稳。";
+    if (total.minutes <= 0) text.textContent = "我今天还没动，先安排一点轻活动。";
+    else if (total.minutes < 30) text.textContent = "我已经站起来了，再加一点就更稳。";
     else if (total.minutes < 150) text.textContent = "今天运动有记录，本周目标继续慢慢补。";
-    else text.textContent = "运动完成，小熊骑车冲过终点线。";
+    else text.textContent = "运动完成，我今天已经达标。";
   }
   if (hero) hero.dataset.exerciseMood = total.minutes >= 150 ? "done" : total.minutes > 0 ? "move" : "rest";
 
@@ -1662,15 +1708,15 @@ function renderTrendStats() {
       return targets.protein && totals.protein >= targets.protein * 0.8;
     }).length;
     const moveDays = rangeDays(activeDate(), 7).filter((date) => exerciseTotals(date).minutes >= 20).length;
-    coach.textContent = `本周小熊总结：平均摄入 ${Math.round(week.food / week.days)} kcal，蛋白达标 ${proteinDays} / 7 天，运动完成 ${moveDays} / 7 天。`;
+    coach.textContent = `本周总结：平均摄入 ${Math.round(week.food / week.days)} kcal，蛋白达标 ${proteinDays} / 7 天，运动完成 ${moveDays} / 7 天。`;
   }
   const trendCoach = $("#trendCoachText");
   if (trendCoach) {
     const recordedDays = rangeDays(activeDate(), trendRangeDays).filter((date) => hasDayRecord(date)).length;
     trendCoach.textContent =
       recordedDays >= 3
-        ? `最近 ${trendRangeDays} 天有 ${recordedDays} 天记录，小熊开始能看出一点节奏了。`
-        : "连续记录 3 天后，小熊会更容易看出节奏。";
+        ? `最近 ${trendRangeDays} 天有 ${recordedDays} 天记录，我开始能看出一点节奏了。`
+        : "连续记录 3 天后，我会更容易看出节奏。";
   }
 }
 
@@ -2297,7 +2343,7 @@ function handleFoodSubmit(event) {
   ["foodName", "grams", "kcal100", "protein100", "carbs100", "fat100", "notes"].forEach((name) => setFormValue(form, name, ""));
   fillFoodDatalist();
   renderAll();
-  confirmDailyAction("已记一餐，小熊收到啦", "food");
+  confirmDailyAction("已记一餐，我收到啦", "food");
 }
 
 function handleBodySubmit(event) {
@@ -3344,7 +3390,7 @@ function drawBodyChart(progress = 1) {
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(-trendRangeDays);
   if (!entries.length) {
-    drawEmptyChart(ctx, width, height, "还没有趋势", "连续记录 3 天后，小熊会帮你看变化");
+    drawEmptyChart(ctx, width, height, "还没有趋势", "连续记录 3 天后，我会帮你看变化");
     return;
   }
 
@@ -3438,7 +3484,7 @@ function drawCalorieChart(progress = 1) {
   const days = rangeDays(activeDate(), trendRangeDays);
   const data = days.map((date) => ({ date, ...daySummary(date) }));
   if (!data.some((day) => day.food.kcal > 0 || day.exercise.kcal > 0)) {
-    drawEmptyChart(ctx, width, height, "还没有趋势", "先记几餐，小熊会帮你看摄入和预算");
+    drawEmptyChart(ctx, width, height, "还没有趋势", "先记几餐，我会帮你看摄入和预算");
     return;
   }
 
@@ -3537,7 +3583,7 @@ function bindEvents() {
     if (!event.target.closest(".quick-fab-wrap")) closeQuickActions();
   });
 
-  $("#profileButton").addEventListener("click", openProfileCenter);
+  $("#profileButton")?.addEventListener("click", openProfileCenter);
   $("#checkupButton").addEventListener("click", openCheckupModal);
   $("#checkupClose").addEventListener("click", closeCheckupModal);
   $("#checkupModal").addEventListener("click", (event) => {
@@ -3609,7 +3655,7 @@ function bindEvents() {
   $("#clearFoodPhoto").addEventListener("click", clearFoodPhoto);
   $("#foodAiDrafts").addEventListener("click", handleFoodAiDraftClick);
   $("#todaySupplementList").addEventListener("change", handleSupplementListChange);
-  $("#dashboardSupplementList").addEventListener("change", handleSupplementListChange);
+  $("#dashboardSupplementList")?.addEventListener("change", handleSupplementListChange);
   $("#toggleWorkoutDay").addEventListener("click", toggleWorkoutDay);
   $("#toggleSupplementReminders").addEventListener("click", toggleSupplementReminders);
   $("#supplementForm").addEventListener("submit", handleSupplementSubmit);
