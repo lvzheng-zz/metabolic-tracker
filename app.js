@@ -1,6 +1,6 @@
 const STORAGE_KEY = "metabolic-tracker-v1";
 const AUTH_STORAGE_KEY = "metabolic-tracker-auth-v1";
-const APP_VERSION = "2026-07-01-structure-fix";
+const APP_VERSION = "2026-07-01-ui-ia-fix";
 const BEAR_ASSETS = {
   ready: "bear-hero.png",
   normal: "bear-hero.png",
@@ -39,8 +39,8 @@ const PAGE_HEADERS = {
     subtitle: "看最近变化，不用每天纠结单点数字"
   },
   profile: {
-    title: "个人中心",
-    subtitle: "目标、同步、导入导出和高级设置"
+    title: "个人",
+    subtitle: "个人中心、同步、备份和趋势"
   }
 };
 
@@ -997,6 +997,16 @@ function openProfileCenter() {
   setView("profile");
 }
 
+function mountTrendsInProfile() {
+  const trends = $("#trends");
+  const profilePage = $("#profile .profile-page");
+  if (!trends || !profilePage || trends.dataset.mountedInProfile === "true") return;
+  trends.classList.remove("view", "is-active");
+  trends.classList.add("profile-trends");
+  trends.dataset.mountedInProfile = "true";
+  profilePage.append(trends);
+}
+
 function openCheckupModal() {
   const modal = $("#checkupModal");
   if (!modal) return;
@@ -1042,10 +1052,19 @@ function renderDashboard() {
   const proteinPill = $("#todayProteinPill");
   const movePill = $("#todayMovePill");
   const supplementPill = $("#todaySupplementPill");
+  const proteinRatio = targets.protein ? summary.food.protein / targets.protein : 0;
+  const moveRatio = summary.exercise.minutes / moveTarget;
+  const setProgressBar = (selector, value) => {
+    const bar = $(selector);
+    if (bar) bar.style.width = `${Math.min(Math.max(value, 0), 1) * 100}%`;
+  };
   if (proteinPill) proteinPill.textContent = `蛋白 ${round(summary.food.protein, 1)} / ${round(targets.protein, 1)}g`;
   if (movePill) movePill.textContent = `运动 ${Math.round(summary.exercise.minutes)} / ${moveTarget}min`;
   const supplementDone = supplements.taken ?? supplements.done ?? 0;
   if (supplementPill) supplementPill.textContent = `补剂 ${supplementDone} / ${supplements.total}`;
+  setProgressBar("#todayProteinBar", proteinRatio);
+  setProgressBar("#todayMoveBar", moveRatio);
+  setProgressBar("#todaySupplementBar", supplements.total ? supplementDone / supplements.total : 0);
 
   const latestWeight = currentWeight();
   $("#latestWeight").textContent = latestWeight ? formatUnit(latestWeight, "kg", 1) : "--";
@@ -1342,9 +1361,7 @@ function supplementItemNode(item, date, compact = false) {
   body.className = "supplement-check-body";
   const title = document.createElement("strong");
   title.textContent = item.name;
-  const detail = document.createElement("small");
-  detail.textContent = supplementDetail(item);
-  body.append(title, detail);
+  body.append(title);
   label.append(checkbox, circle, body);
   return label;
 }
@@ -1435,9 +1452,7 @@ function renderSupplementPlanList() {
     const body = document.createElement("div");
     const title = document.createElement("strong");
     title.textContent = item.name;
-    const detail = document.createElement("p");
-    detail.textContent = `${categoryLabel(item.category)} · ${supplementDetail(item)}${item.reminder ? "" : " · 不提醒"}`;
-    body.append(title, detail);
+    body.append(title);
 
     const actions = document.createElement("div");
     actions.className = "supplement-plan-actions";
@@ -3384,7 +3399,8 @@ function easeOutCubic(value) {
 }
 
 function renderChartsIfVisible() {
-  if (!$("#trends").classList.contains("is-active")) return;
+  const trendsVisible = $("#trends")?.classList.contains("is-active") || $("#profile")?.classList.contains("is-active");
+  if (!trendsVisible) return;
   if (prefersReducedMotion()) {
     drawBodyChart(1);
     drawCalorieChart(1);
@@ -3544,8 +3560,9 @@ function drawBodyChart(progress = 1) {
   ctx.fillText("腰围 cm", padding.left + 72, 16);
   ctx.fillStyle = "#65717f";
   ctx.textAlign = "center";
+  const bodyLabelStep = Math.max(1, Math.ceil(entries.length / 6));
   entries.forEach((entry, index) => {
-    if (index !== 0 && index !== entries.length - 1 && entries.length > 6 && index % 5 !== 0) return;
+    if (index !== 0 && index !== entries.length - 1 && index % bodyLabelStep !== 0) return;
     ctx.fillText(entry.date.slice(5), scaleX(index), height - 18);
   });
 }
@@ -3626,6 +3643,7 @@ function drawCalorieChart(progress = 1) {
     ctx.fillText(Math.round(value), padding.left - 8, padding.top + (plotH / 4) * i + 4);
   }
 
+  const calorieLabelStep = Math.max(1, Math.ceil(data.length / 6));
   data.forEach((day, index) => {
     const x = padding.left + (plotW / data.length) * index + (plotW / data.length - barW) / 2;
     const animatedFood = day.food.kcal * progress;
@@ -3634,7 +3652,9 @@ function drawCalorieChart(progress = 1) {
     ctx.fillRect(x, scaleY(animatedFood), barW, Math.max(1, barHeight));
     ctx.fillStyle = "#65717f";
     ctx.textAlign = "center";
-    if (index % 2 === 0 || data.length <= 7) ctx.fillText(day.date.slice(5), x + barW / 2, height - 18);
+    if (index === 0 || index === data.length - 1 || index % calorieLabelStep === 0) {
+      ctx.fillText(day.date.slice(5), x + barW / 2, height - 18);
+    }
   });
 
   ctx.save();
@@ -3767,7 +3787,7 @@ function bindEvents() {
   $("#todaySupplementList").addEventListener("change", handleSupplementListChange);
   $("#dashboardSupplementList")?.addEventListener("change", handleSupplementListChange);
   $("#toggleWorkoutDay").addEventListener("click", toggleWorkoutDay);
-  $("#toggleSupplementReminders").addEventListener("click", toggleSupplementReminders);
+  $("#toggleSupplementReminders")?.addEventListener("click", toggleSupplementReminders);
   $("#supplementForm").addEventListener("submit", handleSupplementSubmit);
   $("#clearSupplementForm").addEventListener("click", resetSupplementForm);
   $("#supplementPlanList").addEventListener("click", handleSupplementPlanClick);
@@ -3830,6 +3850,7 @@ function init() {
   setFormDates(activeDate());
   seedDemoDataIfNeeded();
   initIcons();
+  mountTrendsInProfile();
   bindEvents();
   resetSupplementForm();
   startSupplementReminderLoop();

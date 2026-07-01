@@ -7,7 +7,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="减脂记录" />
     <title>代谢减脂记录</title>
-    <link rel="stylesheet" href="./styles.css?v=2026-07-01-structure-fix" />
+    <link rel="stylesheet" href="./styles.css?v=2026-07-01-ui-ia-fix" />
   </head>
   <body>
     <div class="app-shell" data-current-view="dashboard">
@@ -20,13 +20,6 @@
             <h1 id="appTitle">今天的我</h1>
             <p id="appSubtitle">记录饮食、运动和身体状态</p>
           </div>
-          <button id="profileButton" class="profile-button" type="button">
-            <span class="icon" data-icon="user"></span>
-            <span>
-              <strong id="profileName">个人中心</strong>
-              <small id="profileSummary">未设置</small>
-            </span>
-          </button>
         </div>
         <div class="top-actions">
           <label class="field compact">
@@ -53,9 +46,9 @@
           <span class="icon" data-icon="scale"></span>
           <span>身体</span>
         </button>
-        <button class="tab" type="button" data-view="trends">
-          <span class="icon" data-icon="chart-line"></span>
-          <span>趋势</span>
+        <button class="tab" type="button" data-view="profile">
+          <span class="icon" data-icon="user"></span>
+          <span>个人</span>
         </button>
       </nav>
 
@@ -78,7 +71,7 @@
                 </div>
                 <div class="hero-companion" aria-hidden="true">
                   <div class="bear-mascot">
-                    <img id="bearMascotImage" class="bear-reference-img bear-reference-hero" src="./assets/bears/bear-hero.png?v=2026-07-01-structure-fix" alt="" />
+                    <img id="bearMascotImage" class="bear-reference-img bear-reference-hero" src="./assets/bears/bear-hero.png?v=2026-07-01-ui-ia-fix" alt="" />
                     <svg class="soft-bear soft-bear-main" viewBox="0 0 240 260" role="img">
                       <ellipse class="soft-bear-shadow" cx="122" cy="238" rx="74" ry="14"></ellipse>
                       <ellipse class="soft-bear-body" cx="122" cy="166" rx="62" ry="72"></ellipse>
@@ -134,9 +127,18 @@
                 <div id="calorieMeter"></div>
               </div>
               <div class="today-pill-row">
-                <span id="todayProteinPill">蛋白 -- / --</span>
-                <span id="todayMovePill">运动 -- / 150min</span>
-                <span id="todaySupplementPill">补剂 -- / --</span>
+                <div class="today-progress-card">
+                  <span id="todayProteinPill">蛋白 -- / --</span>
+                  <i aria-hidden="true"><b id="todayProteinBar"></b></i>
+                </div>
+                <div class="today-progress-card">
+                  <span id="todayMovePill">运动 -- / 150min</span>
+                  <i aria-hidden="true"><b id="todayMoveBar"></b></i>
+                </div>
+                <div class="today-progress-card">
+                  <span id="todaySupplementPill">补剂 -- / --</span>
+                  <i aria-hidden="true"><b id="todaySupplementBar"></b></i>
+                </div>
               </div>
             </section>
 
@@ -324,7 +326,7 @@
               <p>我先看总热量，再补蛋白、控饮料和外卖。</p>
             </div>
             <div class="food-plate-bear" aria-hidden="true">
-              <img class="bear-reference-img bear-reference-card" src="./assets/bears/bear-ready.png?v=2026-07-01-structure-fix" alt="" />
+              <img class="bear-reference-img bear-reference-card" src="./assets/bears/bear-ready.png?v=2026-07-01-ui-ia-fix" alt="" />
               <svg class="soft-bear soft-bear-card soft-bear-food" viewBox="0 0 220 220">
                 <ellipse class="soft-bear-shadow" cx="112" cy="204" rx="58" ry="11"></ellipse>
                 <ellipse class="soft-bear-body" cx="112" cy="136" rx="50" ry="57"></ellipse>
@@ -366,48 +368,6 @@
               <div>
                 <span id="foodPlateFat">脂肪 -- / --</span>
                 <i><b id="foodFatBar"></b></i>
-              </div>
-            </div>
-          </section>
-
-          <section class="panel food-quick-panel">
-            <div class="panel-head compact-head">
-              <div>
-                <p class="eyebrow">快速记录</p>
-                <h2>少填一点，先记起来</h2>
-              </div>
-            </div>
-            <div class="food-quick-actions">
-              <button class="food-action-button" type="button" data-food-action="photo">
-                <span class="icon" data-icon="camera"></span>
-                <strong>拍照识别</strong>
-              </button>
-              <button class="food-action-button" type="button" data-food-action="ai">
-                <span class="icon" data-icon="sparkles"></span>
-                <strong>AI 估算</strong>
-              </button>
-              <button class="food-action-button" type="button" data-food-action="manual">
-                <span class="icon" data-icon="plus"></span>
-                <strong>手动添加</strong>
-              </button>
-            </div>
-            <div class="food-chip-groups">
-              <div class="food-chip-group">
-                <strong>常用食物</strong>
-                <button class="food-chip" type="button" data-food-preset="米饭（熟）">米饭</button>
-                <button class="food-chip" type="button" data-food-preset="鸡蛋">鸡蛋</button>
-                <button class="food-chip" type="button" data-food-preset="鸡胸肉（熟）">鸡胸肉</button>
-                <button class="food-chip" type="button" data-food-preset="纯牛奶">牛奶</button>
-                <button class="food-chip" type="button" data-food-preset="无糖酸奶">酸奶</button>
-              </div>
-              <div class="food-chip-group">
-                <strong>外卖快捷估算</strong>
-                <button class="food-chip" type="button" data-food-template="盖饭">盖饭</button>
-                <button class="food-chip" type="button" data-food-template="炒饭">炒饭</button>
-                <button class="food-chip" type="button" data-food-template="炸鸡">炸鸡</button>
-                <button class="food-chip" type="button" data-food-template="汉堡">汉堡</button>
-                <button class="food-chip" type="button" data-food-template="麻辣烫">麻辣烫</button>
-                <button class="food-chip" type="button" data-food-template="奶茶">奶茶</button>
               </div>
             </div>
           </section>
@@ -494,6 +454,42 @@
                   <span>加入饮食</span>
                 </button>
               </form>
+              <details class="advanced-fields food-quick-panel food-quick-details">
+                <summary>快速记录</summary>
+                <div class="food-quick-actions">
+                  <button class="food-action-button" type="button" data-food-action="photo">
+                    <span class="icon" data-icon="camera"></span>
+                    <strong>拍照识别</strong>
+                  </button>
+                  <button class="food-action-button" type="button" data-food-action="ai">
+                    <span class="icon" data-icon="sparkles"></span>
+                    <strong>AI 估算</strong>
+                  </button>
+                  <button class="food-action-button" type="button" data-food-action="manual">
+                    <span class="icon" data-icon="plus"></span>
+                    <strong>手动添加</strong>
+                  </button>
+                </div>
+                <div class="food-chip-groups">
+                  <div class="food-chip-group">
+                    <strong>常用食物</strong>
+                    <button class="food-chip" type="button" data-food-preset="米饭（熟）">米饭</button>
+                    <button class="food-chip" type="button" data-food-preset="鸡蛋">鸡蛋</button>
+                    <button class="food-chip" type="button" data-food-preset="鸡胸肉（熟）">鸡胸肉</button>
+                    <button class="food-chip" type="button" data-food-preset="纯牛奶">牛奶</button>
+                    <button class="food-chip" type="button" data-food-preset="无糖酸奶">酸奶</button>
+                  </div>
+                  <div class="food-chip-group">
+                    <strong>外卖快捷估算</strong>
+                    <button class="food-chip" type="button" data-food-template="盖饭">盖饭</button>
+                    <button class="food-chip" type="button" data-food-template="炒饭">炒饭</button>
+                    <button class="food-chip" type="button" data-food-template="炸鸡">炸鸡</button>
+                    <button class="food-chip" type="button" data-food-template="汉堡">汉堡</button>
+                    <button class="food-chip" type="button" data-food-template="麻辣烫">麻辣烫</button>
+                    <button class="food-chip" type="button" data-food-template="奶茶">奶茶</button>
+                  </div>
+                </div>
+              </details>
             </section>
 
             <section class="panel">
@@ -580,21 +576,14 @@
                   <span>今天训练</span>
                 </button>
               </div>
-              <div class="supplement-actions">
-                <button id="toggleSupplementReminders" class="secondary-button" type="button">
-                  <span class="icon" data-icon="bell"></span>
-                  <span>开启提醒</span>
-                </button>
-                <p id="supplementReminderStatus" class="save-status" aria-live="polite"></p>
-              </div>
               <div id="todaySupplementList" class="supplement-list"></div>
               <details class="advanced-fields supplement-settings">
-                <summary>计划设置</summary>
+                <summary>添加 / 删除项目</summary>
                 <div class="supplement-settings-body">
                   <div class="panel-head compact-head">
                     <div>
-                      <p class="eyebrow">计划</p>
-                      <h2>补剂与用药提醒</h2>
+                      <p class="eyebrow">项目</p>
+                      <h2>补剂记录</h2>
                     </div>
                     <button id="resetSupplementDefaults" class="ghost-button" type="button">
                       <span class="icon" data-icon="refresh-cw"></span>
@@ -607,47 +596,47 @@
                       <span>名称</span>
                       <input name="name" placeholder="例如 维生素D3+K2" required />
                     </label>
-                    <label class="field">
+                    <label class="field supplement-extra-field">
                       <span>剂量</span>
                       <input name="dose" placeholder="1粒 / 按医嘱" />
                     </label>
-                    <label class="field">
+                    <label class="field supplement-extra-field">
                       <span>时间</span>
-                      <input name="time" type="time" required />
+                      <input name="time" type="time" />
                     </label>
-                    <label class="field">
+                    <label class="field supplement-extra-field">
                       <span>时机</span>
                       <input name="timing" placeholder="早餐后 / 睡前 / 运动前" />
                     </label>
-                    <label class="field">
+                    <label class="field supplement-extra-field">
                       <span>类型</span>
                       <select name="category">
                         <option value="supplement">补剂</option>
                         <option value="medicine">药物</option>
                       </select>
                     </label>
-                    <label class="field">
+                    <label class="field supplement-extra-field">
                       <span>频率</span>
                       <select name="cadence">
                         <option value="daily">每天</option>
                         <option value="workout">训练日</option>
                       </select>
                     </label>
-                    <label class="field">
+                    <label class="field supplement-extra-field">
                       <span>状态</span>
                       <select name="active">
                         <option value="true">启用</option>
                         <option value="false">暂停</option>
                       </select>
                     </label>
-                    <label class="field">
+                    <label class="field supplement-extra-field">
                       <span>到点提醒</span>
                       <select name="reminder">
                         <option value="true">提醒</option>
                         <option value="false">不提醒</option>
                       </select>
                     </label>
-                    <label class="field span-2">
+                    <label class="field span-2 supplement-extra-field">
                       <span>备注</span>
                       <input name="notes" placeholder="例如 训练日1片；关节痛时暂停" />
                     </label>
@@ -663,10 +652,6 @@
                   <div id="supplementPlanList" class="supplement-plan-list"></div>
                 </div>
               </details>
-              <div class="note-panel compact-note">
-                <strong>提醒边界</strong>
-                <p>浏览器提醒只在这个页面打开时生效；药物剂量按医生要求执行，打勾只用于记录。</p>
-              </div>
             </section>
 
             <div id="checkupModal" class="modal-backdrop" hidden>
@@ -770,7 +755,7 @@
               <p id="exerciseProgressText">我今天还没动，先安排一点轻活动。</p>
             </div>
             <div class="exercise-bear" aria-hidden="true">
-              <img class="bear-reference-img bear-reference-card" src="./assets/bears/bear-sport.png?v=2026-07-01-structure-fix" alt="" />
+              <img class="bear-reference-img bear-reference-card" src="./assets/bears/bear-sport.png?v=2026-07-01-ui-ia-fix" alt="" />
               <svg class="soft-bear soft-bear-card soft-bear-sport" viewBox="0 0 220 220">
                 <ellipse class="soft-bear-shadow" cx="112" cy="204" rx="58" ry="11"></ellipse>
                 <ellipse class="soft-bear-body" cx="112" cy="137" rx="50" ry="57"></ellipse>
@@ -798,16 +783,6 @@
                 <path class="soft-bear-badge-line" d="M95 143 H105 L111 134 L119 153 L124 143 H132"></path>
               </svg>
             </div>
-            <div class="exercise-template-grid">
-              <button class="exercise-template-button" type="button" data-exercise-template="快走|20|easy">快走 20min</button>
-              <button class="exercise-template-button" type="button" data-exercise-template="骑行|30|normal">骑车 30min</button>
-              <button class="exercise-template-button" type="button" data-exercise-template="力量训练|45|normal">力量训练 45min</button>
-              <button class="exercise-template-button" type="button" data-exercise-template="羽毛球|60|hard">羽毛球 60min</button>
-              <button class="exercise-template-button" type="button" data-exercise-template="卧推|45|normal">卧推</button>
-              <button class="exercise-template-button" type="button" data-exercise-template="深蹲|45|hard">深蹲</button>
-              <button class="exercise-template-button" type="button" data-exercise-template="硬拉|45|hard">硬拉</button>
-              <button class="exercise-template-button" type="button" data-exercise-template="自定义|30|normal">自定义</button>
-            </div>
           </section>
           <div class="two-column">
             <section class="panel">
@@ -818,7 +793,7 @@
                 </div>
               </div>
               <form id="exerciseForm" class="form-grid">
-                <label class="field">
+                <label class="field entry-date-field">
                   <span>日期</span>
                   <input name="date" type="date" required />
                 </label>
@@ -896,7 +871,7 @@
               <p id="trendCoachText">连续记录 3 天后，我会更容易看出节奏。</p>
             </div>
             <div class="trend-bear" aria-hidden="true">
-              <img class="bear-reference-img bear-reference-card" src="./assets/bears/bear-happy.png?v=2026-07-01-structure-fix" alt="" />
+              <img class="bear-reference-img bear-reference-card" src="./assets/bears/bear-happy.png?v=2026-07-01-ui-ia-fix" alt="" />
               <svg class="soft-bear soft-bear-card soft-bear-trend" viewBox="0 0 220 220">
                 <ellipse class="soft-bear-shadow" cx="112" cy="204" rx="58" ry="11"></ellipse>
                 <ellipse class="soft-bear-body" cx="112" cy="137" rx="50" ry="57"></ellipse>
@@ -1242,6 +1217,6 @@
 
     <div id="actionFeedback" class="action-feedback" aria-live="polite" hidden></div>
 
-    <script src="./app.js?v=2026-07-01-structure-fix"></script>
+    <script src="./app.js?v=2026-07-01-ui-ia-fix"></script>
   </body>
 </html>
