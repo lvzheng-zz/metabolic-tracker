@@ -7,7 +7,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="减脂记录" />
     <title>代谢减脂记录</title>
-    <link rel="stylesheet" href="./styles.css?v=2026-07-01-app-shell" />
+    <link rel="stylesheet" href="./styles.css?v=2026-07-01-structure-fix" />
   </head>
   <body>
     <div class="app-shell" data-current-view="dashboard">
@@ -64,7 +64,10 @@
           <div class="dashboard-grid">
             <section class="panel hero-panel bear-state-card" id="bearStateCard" data-bear-mood="ready">
               <div class="bear-state-copy">
-                <p class="eyebrow">今天的我</p>
+                <div class="bear-state-labels">
+                  <p class="eyebrow">今天的我</p>
+                  <span>小熊状态</span>
+                </div>
                 <h2 id="bearMoodTitle">我准备开始新的一天</h2>
                 <p id="bearMoodText">我今天还没开始记录，先记一餐就好。</p>
               </div>
@@ -75,7 +78,7 @@
                 </div>
                 <div class="hero-companion" aria-hidden="true">
                   <div class="bear-mascot">
-                    <img id="bearMascotImage" class="bear-reference-img bear-reference-hero" src="./assets/bears/bear-hero.png?v=2026-07-01-app-shell" alt="" />
+                    <img id="bearMascotImage" class="bear-reference-img bear-reference-hero" src="./assets/bears/bear-hero.png?v=2026-07-01-structure-fix" alt="" />
                     <svg class="soft-bear soft-bear-main" viewBox="0 0 240 260" role="img">
                       <ellipse class="soft-bear-shadow" cx="122" cy="238" rx="74" ry="14"></ellipse>
                       <ellipse class="soft-bear-body" cx="122" cy="166" rx="62" ry="72"></ellipse>
@@ -252,7 +255,7 @@
             <section class="panel supplement-summary-panel">
               <div class="panel-head">
                 <div>
-                  <p class="eyebrow">今日用药/补剂</p>
+                  <p class="eyebrow">每日项目进度</p>
                   <h2 id="supplementSummaryTitle">--</h2>
                 </div>
               </div>
@@ -321,7 +324,7 @@
               <p>我先看总热量，再补蛋白、控饮料和外卖。</p>
             </div>
             <div class="food-plate-bear" aria-hidden="true">
-              <img class="bear-reference-img bear-reference-card" src="./assets/bears/bear-ready.png?v=2026-07-01-app-shell" alt="" />
+              <img class="bear-reference-img bear-reference-card" src="./assets/bears/bear-ready.png?v=2026-07-01-structure-fix" alt="" />
               <svg class="soft-bear soft-bear-card soft-bear-food" viewBox="0 0 220 220">
                 <ellipse class="soft-bear-shadow" cx="112" cy="204" rx="58" ry="11"></ellipse>
                 <ellipse class="soft-bear-body" cx="112" cy="136" rx="50" ry="57"></ellipse>
@@ -428,10 +431,6 @@
                     <span class="icon" data-icon="sparkles"></span>
                     <span>AI 生成草稿</span>
                   </button>
-                  <button id="testFoodAi" class="ghost-button" type="button">
-                    <span class="icon" data-icon="info"></span>
-                    <span>接口自检</span>
-                  </button>
                   <button id="clearFoodPhoto" class="ghost-button" type="button" hidden>
                     <span class="icon" data-icon="x"></span>
                     <span>清除</span>
@@ -469,22 +468,27 @@
                   <span>热量 /100g</span>
                   <input name="kcal100" type="number" min="0" step="1" placeholder="116" required />
                 </label>
-                <label class="field">
-                  <span>蛋白 /100g</span>
-                  <input name="protein100" type="number" min="0" step="0.1" placeholder="2.6" />
-                </label>
-                <label class="field">
-                  <span>碳水 /100g</span>
-                  <input name="carbs100" type="number" min="0" step="0.1" placeholder="25.9" />
-                </label>
-                <label class="field">
-                  <span>脂肪 /100g</span>
-                  <input name="fat100" type="number" min="0" step="0.1" placeholder="0.3" />
-                </label>
-                <label class="field">
-                  <span>备注</span>
-                  <input name="notes" placeholder="少油 / 外卖 / 自制" />
-                </label>
+                <details class="advanced-fields form-advanced-record span-2">
+                  <summary>高级记录</summary>
+                  <div class="form-grid">
+                    <label class="field">
+                      <span>蛋白 /100g</span>
+                      <input name="protein100" type="number" min="0" step="0.1" placeholder="2.6" />
+                    </label>
+                    <label class="field">
+                      <span>碳水 /100g</span>
+                      <input name="carbs100" type="number" min="0" step="0.1" placeholder="25.9" />
+                    </label>
+                    <label class="field">
+                      <span>脂肪 /100g</span>
+                      <input name="fat100" type="number" min="0" step="0.1" placeholder="0.3" />
+                    </label>
+                    <label class="field">
+                      <span>备注</span>
+                      <input name="notes" placeholder="少油 / 外卖 / 自制" />
+                    </label>
+                  </div>
+                </details>
                 <button class="primary-button span-2" type="submit">
                   <span class="icon" data-icon="plus"></span>
                   <span>加入饮食</span>
@@ -545,14 +549,19 @@
                   <span>睡眠 h</span>
                   <input name="sleep" type="number" min="0" max="24" step="0.1" />
                 </label>
-                <label class="field span-2">
-                  <span>临时用药/异常</span>
-                  <input name="medication" placeholder="漏服 / 副作用 / 临时药物 / 不舒服" />
-                </label>
-                <label class="field span-2">
-                  <span>备注</span>
-                  <input name="notes" placeholder="饥饿感 / 压力 / 应酬 / 身体状态" />
-                </label>
+                <details class="advanced-fields form-advanced-record span-2">
+                  <summary>高级记录</summary>
+                  <div class="form-grid">
+                    <label class="field span-2">
+                      <span>临时用药/异常</span>
+                      <input name="medication" placeholder="漏服 / 副作用 / 临时药物 / 不舒服" />
+                    </label>
+                    <label class="field span-2">
+                      <span>备注</span>
+                      <input name="notes" placeholder="饥饿感 / 压力 / 应酬 / 身体状态" />
+                    </label>
+                  </div>
+                </details>
                 <button class="primary-button span-2" type="submit">
                   <span class="icon" data-icon="plus"></span>
                   <span>保存每日记录</span>
@@ -745,7 +754,7 @@
                 </div>
                 <button id="checkupButton" class="ghost-button" type="button">
                   <span class="icon" data-icon="plus"></span>
-                  <span>复查指标</span>
+                  <span>高级记录</span>
                 </button>
               </div>
               <div id="bodyEntries" class="entry-list"></div>
@@ -761,7 +770,7 @@
               <p id="exerciseProgressText">我今天还没动，先安排一点轻活动。</p>
             </div>
             <div class="exercise-bear" aria-hidden="true">
-              <img class="bear-reference-img bear-reference-card" src="./assets/bears/bear-sport.png?v=2026-07-01-app-shell" alt="" />
+              <img class="bear-reference-img bear-reference-card" src="./assets/bears/bear-sport.png?v=2026-07-01-structure-fix" alt="" />
               <svg class="soft-bear soft-bear-card soft-bear-sport" viewBox="0 0 220 220">
                 <ellipse class="soft-bear-shadow" cx="112" cy="204" rx="58" ry="11"></ellipse>
                 <ellipse class="soft-bear-body" cx="112" cy="137" rx="50" ry="57"></ellipse>
@@ -829,22 +838,27 @@
                     <option value="hard">偏高</option>
                   </select>
                 </label>
-                <label class="field">
-                  <span>平均心率 bpm</span>
-                  <input name="heartRate" type="number" min="0" step="1" />
-                </label>
-                <label class="field">
-                  <span>消耗 kcal</span>
-                  <input name="kcal" type="number" min="0" step="1" required />
-                </label>
-                <label class="field">
-                  <span>备注</span>
-                  <input name="notes" placeholder="心率 / 配速 / 器械" />
-                </label>
-                <button class="secondary-button" id="estimateExercise" type="button">
-                  <span class="icon" data-icon="calculator"></span>
-                  <span>估算消耗</span>
-                </button>
+                <details class="advanced-fields form-advanced-record span-2">
+                  <summary>高级记录</summary>
+                  <div class="form-grid">
+                    <label class="field">
+                      <span>平均心率 bpm</span>
+                      <input name="heartRate" type="number" min="0" step="1" />
+                    </label>
+                    <label class="field">
+                      <span>消耗 kcal</span>
+                      <input name="kcal" type="number" min="0" step="1" />
+                    </label>
+                    <label class="field">
+                      <span>备注</span>
+                      <input name="notes" placeholder="心率 / 配速 / 器械" />
+                    </label>
+                    <button class="secondary-button" id="estimateExercise" type="button">
+                      <span class="icon" data-icon="calculator"></span>
+                      <span>估算消耗</span>
+                    </button>
+                  </div>
+                </details>
                 <button class="primary-button" type="submit">
                   <span class="icon" data-icon="plus"></span>
                   <span>加入运动</span>
@@ -882,7 +896,7 @@
               <p id="trendCoachText">连续记录 3 天后，我会更容易看出节奏。</p>
             </div>
             <div class="trend-bear" aria-hidden="true">
-              <img class="bear-reference-img bear-reference-card" src="./assets/bears/bear-happy.png?v=2026-07-01-app-shell" alt="" />
+              <img class="bear-reference-img bear-reference-card" src="./assets/bears/bear-happy.png?v=2026-07-01-structure-fix" alt="" />
               <svg class="soft-bear soft-bear-card soft-bear-trend" viewBox="0 0 220 220">
                 <ellipse class="soft-bear-shadow" cx="112" cy="204" rx="58" ry="11"></ellipse>
                 <ellipse class="soft-bear-body" cx="112" cy="137" rx="50" ry="57"></ellipse>
@@ -1228,6 +1242,6 @@
 
     <div id="actionFeedback" class="action-feedback" aria-live="polite" hidden></div>
 
-    <script src="./app.js?v=2026-07-01-app-shell"></script>
+    <script src="./app.js?v=2026-07-01-structure-fix"></script>
   </body>
 </html>
