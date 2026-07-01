@@ -1,6 +1,6 @@
 const STORAGE_KEY = "metabolic-tracker-v1";
 const AUTH_STORAGE_KEY = "metabolic-tracker-auth-v1";
-const APP_VERSION = "2026-07-01-bear-assets";
+const APP_VERSION = "2026-07-01-bear-feedback";
 const BEAR_ASSETS = {
   ready: "bear-hero.png",
   normal: "bear-hero.png",
@@ -8,7 +8,9 @@ const BEAR_ASSETS = {
   over: "bear-over.png",
   protein: "bear-protein.png",
   done: "bear-happy.png",
-  move: "bear-sport.png"
+  move: "bear-sport.png",
+  checkin: "bear-checkin.png",
+  rest: "bear-rest.png"
 };
 
 function bearAssetUrl(fileName) {
@@ -229,6 +231,7 @@ const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selec
 let state = loadState();
 let settingsAutosaveTimer = null;
 let settingsStatusTimer = null;
+let actionFeedbackTimer = null;
 let foodPhotoDataUrl = "";
 let foodAiDrafts = [];
 let supplementReminderTimer = null;
@@ -913,18 +916,27 @@ function renderDashboard() {
 }
 
 function bearMoodForDay(summary, targets, supplements) {
-  if (summary.food.kcal === 0) {
-    return {
-      mood: "ready",
-      title: "小熊准备开工",
-      text: "今天还没饮食记录，先记早餐或午餐就好。"
-    };
-  }
+  const sleep = latestSleepForMood(activeDate());
+  const supplementDone = supplements.taken ?? supplements.done ?? 0;
   if (summary.budget && summary.food.kcal > summary.budget * 1.05) {
     return {
       mood: "over",
       title: "小熊摸摸肚子",
       text: "今天有点多，下一餐清淡一点，明天不用极端补偿。"
+    };
+  }
+  if (sleep !== null && sleep < 6) {
+    return {
+      mood: "rest",
+      title: "小熊先充会儿电",
+      text: "睡眠偏少，今天先稳住饮食和轻活动，训练别硬顶。"
+    };
+  }
+  if (summary.food.kcal === 0) {
+    return {
+      mood: "ready",
+      title: "小熊准备开工",
+      text: "今天还没饮食记录，先记早餐或午餐就好。"
     };
   }
   if (targets.protein && summary.food.protein < targets.protein * 0.55) {
@@ -934,12 +946,18 @@ function bearMoodForDay(summary, targets, supplements) {
       text: "优先补肉蛋奶豆，外卖先看主食、肉和饮料。"
     };
   }
-  const supplementDone = supplements.taken ?? supplements.done ?? 0;
-  if (summary.exercise.minutes >= 150 || supplementDone >= supplements.total && supplements.total > 0) {
+  if (supplementDone >= supplements.total && supplements.total > 0) {
     return {
-      mood: "done",
-      title: "小熊打卡很稳",
-      text: "今天节奏不错，继续保持温暖、稳定、可坚持。"
+      mood: "checkin",
+      title: "小熊打卡完成",
+      text: "今天用药/补剂已经勾完，继续按自己的节奏来。"
+    };
+  }
+  if (summary.exercise.minutes >= 150) {
+    return {
+      mood: "move",
+      title: "小熊运动达标",
+      text: "运动完成，今天的活动量已经很漂亮，晚上注意恢复。"
     };
   }
   if (summary.exercise.minutes >= 20) {
@@ -954,6 +972,47 @@ function bearMoodForDay(summary, targets, supplements) {
     title: "小熊陪你稳住",
     text: "今天有记录了，晚点补一次轻运动会更完整。"
   };
+}
+
+function latestSleepForMood(date) {
+  const todayEntry = state.bodyEntries.find((entry) => entry.date === date && toNumber(entry.sleep) !== null);
+  if (todayEntry) return toNumber(todayEntry.sleep);
+  if (date !== todayISO()) return null;
+  return latestBodyMetric("sleep");
+}
+
+function showActionFeedback(message, tone = "success") {
+  const node = $("#actionFeedback");
+  if (!node) return;
+  window.clearTimeout(actionFeedbackTimer);
+  node.textContent = message;
+  node.dataset.tone = tone;
+  node.hidden = false;
+  node.classList.remove("is-visible");
+  void node.offsetWidth;
+  node.classList.add("is-visible");
+  actionFeedbackTimer = window.setTimeout(() => {
+    node.classList.remove("is-visible");
+    node.hidden = true;
+  }, 2200);
+}
+
+function pulseBear(action = "done") {
+  const card = $("#bearStateCard");
+  if (!card) return;
+  card.dataset.pulse = action;
+  card.classList.remove("is-pulsing");
+  void card.offsetWidth;
+  card.classList.add("is-pulsing");
+  window.setTimeout(() => {
+    card.classList.remove("is-pulsing");
+    delete card.dataset.pulse;
+  }, 900);
+}
+
+function confirmDailyAction(message, action = "done") {
+  showActionFeedback(message);
+  pulseBear(action);
 }
 
 function renderSuggestions(date) {
@@ -1087,6 +1146,7 @@ function supplementSummary(date) {
 }
 
 function setSupplementTaken(date, itemId, taken) {
+  const item = state.supplementItems.find((current) => current.id === itemId);
   state.supplementLogs = state.supplementLogs.filter((log) => !(log.date === date && log.itemId === itemId));
   if (taken) {
     state.supplementLogs.push({
@@ -1099,6 +1159,7 @@ function setSupplementTaken(date, itemId, taken) {
   }
   saveState();
   renderAll();
+  if (taken) confirmDailyAction(`${item?.name || "补剂"} 已打卡`, "checkin");
 }
 
 function cadenceLabel(value) {
@@ -2236,6 +2297,7 @@ function handleFoodSubmit(event) {
   ["foodName", "grams", "kcal100", "protein100", "carbs100", "fat100", "notes"].forEach((name) => setFormValue(form, name, ""));
   fillFoodDatalist();
   renderAll();
+  confirmDailyAction("已记一餐，小熊收到啦", "food");
 }
 
 function handleBodySubmit(event) {
@@ -2252,6 +2314,7 @@ function handleBodySubmit(event) {
   mergeBodyEntry(entry);
   saveState();
   renderAll();
+  confirmDailyAction("身体记录已更新", "body");
 }
 
 function handleCheckupSubmit(event) {
@@ -2312,6 +2375,7 @@ function handleExerciseSubmit(event) {
   saveState();
   ["minutes", "heartRate", "kcal", "notes"].forEach((name) => setFormValue(form, name, ""));
   renderAll();
+  confirmDailyAction("运动记录已加入", "move");
 }
 
 function settingsFromForm(form) {
