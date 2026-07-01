@@ -1,6 +1,6 @@
 const STORAGE_KEY = "metabolic-tracker-v1";
 const AUTH_STORAGE_KEY = "metabolic-tracker-auth-v1";
-const APP_VERSION = "2026-07-01-app-shell";
+const APP_VERSION = "2026-07-01-structure-fix";
 const BEAR_ASSETS = {
   ready: "bear-hero.png",
   normal: "bear-hero.png",
@@ -190,7 +190,8 @@ const DEFAULT_STATE = {
     targetWeight: "",
     aiFoodEndpoint: "/api/recognize-food",
     cloudApiEndpoint: "/api",
-    supplementNotifications: false
+    supplementNotifications: false,
+    demoSeeded: false
   },
   customFoods: [],
   foodEntries: [],
@@ -293,8 +294,14 @@ function loadState() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return structuredClone(DEFAULT_STATE);
     const parsed = JSON.parse(raw);
+    const hasExistingRecords =
+      (Array.isArray(parsed.foodEntries) && parsed.foodEntries.length > 0) ||
+      (Array.isArray(parsed.bodyEntries) && parsed.bodyEntries.length > 0) ||
+      (Array.isArray(parsed.exerciseEntries) && parsed.exerciseEntries.length > 0);
+    const settings = { ...DEFAULT_STATE.settings, ...(parsed.settings || {}) };
+    if (parsed.settings?.demoSeeded === undefined && hasExistingRecords) settings.demoSeeded = true;
     return {
-      settings: { ...DEFAULT_STATE.settings, ...(parsed.settings || {}) },
+      settings,
       customFoods: Array.isArray(parsed.customFoods) ? parsed.customFoods : [],
       foodEntries: Array.isArray(parsed.foodEntries) ? parsed.foodEntries : [],
       bodyEntries: Array.isArray(parsed.bodyEntries) ? parsed.bodyEntries : [],
@@ -408,6 +415,105 @@ function formatUnit(value, unit, digits = 1) {
 
 function newId(prefix) {
   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function seedDemoDataIfNeeded() {
+  if (state.settings.demoSeeded) return;
+  const hasRecords = state.foodEntries.length || state.bodyEntries.length || state.exerciseEntries.length;
+  if (hasRecords) {
+    state.settings.demoSeeded = true;
+    saveState({ skipCloudSync: true });
+    return;
+  }
+
+  const days = rangeDays(todayISO(), 14);
+  const exerciseDays = new Set();
+  const foodPlans = [
+    { kcal100: 112, protein100: 8.5, carbs100: 8.6, fat100: 5.2 },
+    { kcal100: 142, protein100: 12.4, carbs100: 15.8, fat100: 3.2 },
+    { kcal100: 155, protein100: 9.8, carbs100: 17.4, fat100: 5.6 }
+  ];
+
+  state.bodyEntries = days.map((date, index) => ({
+    id: `demo-body-${date}`,
+    date,
+    weight: round(102.4 - index * 0.12 + (index % 3) * 0.08, 1),
+    waist: round(118.2 - index * 0.09, 1),
+    fastingGlucose: round(6.4 - Math.min(index, 10) * 0.03, 1),
+    sleep: round(6.4 + (index % 4) * 0.25, 1),
+    notes: "示例数据，可删除"
+  }));
+
+  state.foodEntries = days.flatMap((date, index) => {
+    const breakfast = foodPlans[0];
+    const lunch = foodPlans[1];
+    const dinner = foodPlans[2];
+    return [
+      {
+        id: `demo-food-breakfast-${date}`,
+        date,
+        meal: "早餐",
+        foodName: "示例早餐：鸡蛋牛奶",
+        grams: 260,
+        ...breakfast,
+        notes: "示例数据，可删除"
+      },
+      {
+        id: `demo-food-lunch-${date}`,
+        date,
+        meal: "午餐",
+        foodName: index % 3 === 0 ? "示例午餐：外卖盖饭估算" : "示例午餐：米饭鸡胸",
+        grams: 440 + (index % 4) * 20,
+        ...lunch,
+        notes: "示例数据，可删除"
+      },
+      {
+        id: `demo-food-dinner-${date}`,
+        date,
+        meal: "晚餐",
+        foodName: index % 5 === 0 ? "示例晚餐：麻辣烫估算" : "示例晚餐：鱼肉蔬菜",
+        grams: 360 + (index % 3) * 30,
+        ...dinner,
+        notes: "示例数据，可删除"
+      }
+    ];
+  });
+
+  state.exerciseEntries = days
+    .map((date, index) => {
+      if (![1, 2, 4, 6, 8, 10, 12, 13].includes(index)) return null;
+      exerciseDays.add(date);
+      const minutes = index % 4 === 0 ? 45 : index % 3 === 0 ? 35 : 25;
+      return {
+        id: `demo-exercise-${date}`,
+        date,
+        type: index % 4 === 0 ? "力量训练" : "快走",
+        minutes,
+        intensity: index % 4 === 0 ? "normal" : "easy",
+        heartRate: 112 + (index % 5) * 5,
+        kcal: minutes * (index % 4 === 0 ? 7 : 5),
+        notes: "示例数据，可删除"
+      };
+    })
+    .filter(Boolean);
+
+  state.supplementWorkoutDates = Array.from(exerciseDays);
+  state.supplementLogs = days.flatMap((date, index) => {
+    const dailyItems = state.supplementItems.filter((item) => item.active && item.cadence === "daily").slice(0, index % 5 === 0 ? 3 : 5);
+    const workoutItems = exerciseDays.has(date)
+      ? state.supplementItems.filter((item) => item.active && item.cadence === "workout").slice(0, 1)
+      : [];
+    return [...dailyItems, ...workoutItems].map((item) => ({
+      id: `demo-supp-${date}-${item.id}`,
+      date,
+      itemId: item.id,
+      taken: true,
+      takenAt: `${date}T08:30:00.000Z`
+    }));
+  });
+
+  state.settings.demoSeeded = true;
+  saveState({ skipCloudSync: true });
 }
 
 function activeDate() {
@@ -2407,6 +2513,8 @@ function handleCheckupSubmit(event) {
 function handleExerciseSubmit(event) {
   event.preventDefault();
   const form = event.currentTarget;
+  const enteredKcal = readFormNumber(form, "kcal");
+  const estimatedKcal = enteredKcal === "" ? estimateExerciseKcal({ allowDefaultWeight: true }) : null;
   const entry = {
     id: newId("exercise"),
     date: formValue(form, "date"),
@@ -2414,7 +2522,7 @@ function handleExerciseSubmit(event) {
     minutes: readFormNumber(form, "minutes"),
     intensity: formValue(form, "intensity"),
     heartRate: readFormNumber(form, "heartRate"),
-    kcal: readFormNumber(form, "kcal"),
+    kcal: enteredKcal === "" ? estimatedKcal ?? 0 : enteredKcal,
     notes: formValue(form, "notes").trim()
   };
   state.exerciseEntries.push(entry);
@@ -2438,7 +2546,8 @@ function settingsFromForm(form) {
     targetWeight: readFormNumber(form, "targetWeight"),
     aiFoodEndpoint: formValue(form, "aiFoodEndpoint").trim() || DEFAULT_STATE.settings.aiFoodEndpoint,
     cloudApiEndpoint: state.settings.cloudApiEndpoint || DEFAULT_STATE.settings.cloudApiEndpoint,
-    supplementNotifications: Boolean(state.settings.supplementNotifications)
+    supplementNotifications: Boolean(state.settings.supplementNotifications),
+    demoSeeded: Boolean(state.settings.demoSeeded)
   };
 }
 
@@ -3260,6 +3369,7 @@ function downloadDeviceCsvTemplate() {
 function clearState() {
   if (!confirm("确认清空所有本地记录？")) return;
   state = structuredClone(DEFAULT_STATE);
+  state.settings.demoSeeded = true;
   saveState();
   fillFoodDatalist();
   renderAll();
@@ -3651,7 +3761,7 @@ function bindEvents() {
   $("#foodForm").addEventListener("submit", handleFoodSubmit);
   $("#foodPhotoInput").addEventListener("change", handleFoodPhotoChange);
   $("#recognizeFoodPhoto").addEventListener("click", recognizeFoodPhoto);
-  $("#testFoodAi").addEventListener("click", runFoodAiSelfTest);
+  $("#testFoodAi")?.addEventListener("click", runFoodAiSelfTest);
   $("#clearFoodPhoto").addEventListener("click", clearFoodPhoto);
   $("#foodAiDrafts").addEventListener("click", handleFoodAiDraftClick);
   $("#todaySupplementList").addEventListener("change", handleSupplementListChange);
@@ -3718,6 +3828,7 @@ function init() {
   monthCursor = monthStart(activeDate());
   fillExerciseTypes();
   setFormDates(activeDate());
+  seedDemoDataIfNeeded();
   initIcons();
   bindEvents();
   resetSupplementForm();
