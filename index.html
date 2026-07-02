@@ -7,7 +7,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="减脂记录" />
     <title>代谢减脂记录</title>
-    <link rel="stylesheet" href="./styles.css?v=2026-07-01-ui-ia-fix" />
+    <link rel="stylesheet" href="./styles.css?v=2026-07-02-home-summary-fix" />
   </head>
   <body>
     <div class="app-shell" data-current-view="dashboard">
@@ -65,13 +65,9 @@
                 <p id="bearMoodText">我今天还没开始记录，先记一餐就好。</p>
               </div>
               <div class="bear-state-main">
-                <div class="balance-ring bear-balance-ring" id="balanceRing" aria-label="今日热量余量">
-                  <span id="balanceValue">--</span>
-                  <small>剩余 kcal</small>
-                </div>
                 <div class="hero-companion" aria-hidden="true">
                   <div class="bear-mascot">
-                    <img id="bearMascotImage" class="bear-reference-img bear-reference-hero" src="./assets/bears/bear-hero.png?v=2026-07-01-ui-ia-fix" alt="" />
+                    <img id="bearMascotImage" class="bear-reference-img bear-reference-hero" src="./assets/bears/bear-hero.png?v=2026-07-02-home-summary-fix" alt="" />
                     <svg class="soft-bear soft-bear-main" viewBox="0 0 240 260" role="img">
                       <ellipse class="soft-bear-shadow" cx="122" cy="238" rx="74" ry="14"></ellipse>
                       <ellipse class="soft-bear-body" cx="122" cy="166" rx="62" ry="72"></ellipse>
@@ -111,7 +107,7 @@
                   <strong id="budgetTitle">-- kcal</strong>
                 </div>
                 <div class="today-metric">
-                  <span>已记录</span>
+                  <span>已经吃了</span>
                   <strong id="todayFoodKcal">--</strong>
                 </div>
                 <div class="today-metric">
@@ -119,7 +115,7 @@
                   <strong id="todayExerciseKcal">--</strong>
                 </div>
                 <div class="today-metric">
-                  <span>当前净摄入</span>
+                  <span>当前摄入</span>
                   <strong id="todayNetKcal">--</strong>
                 </div>
               </div>
@@ -128,16 +124,16 @@
               </div>
               <div class="today-pill-row">
                 <div class="today-progress-card">
-                  <span id="todayProteinPill">蛋白 -- / --</span>
-                  <i aria-hidden="true"><b id="todayProteinBar"></b></i>
+                  <span id="todaySleepPill">睡眠 -- h</span>
+                  <i aria-hidden="true"><b id="todaySleepBar"></b></i>
                 </div>
                 <div class="today-progress-card">
                   <span id="todayMovePill">运动 -- / 150min</span>
                   <i aria-hidden="true"><b id="todayMoveBar"></b></i>
                 </div>
                 <div class="today-progress-card">
-                  <span id="todaySupplementPill">补剂 -- / --</span>
-                  <i aria-hidden="true"><b id="todaySupplementBar"></b></i>
+                  <span id="todayWaterPill">饮水 待记录</span>
+                  <i aria-hidden="true"><b id="todayWaterBar"></b></i>
                 </div>
               </div>
             </section>
@@ -254,21 +250,6 @@
               </div>
             </section>
 
-            <section class="panel supplement-summary-panel">
-              <div class="panel-head">
-                <div>
-                  <p class="eyebrow">每日项目进度</p>
-                  <h2 id="supplementSummaryTitle">--</h2>
-                </div>
-              </div>
-              <div class="supplement-progress">
-                <div class="meter" aria-hidden="true">
-                  <div id="supplementMeter"></div>
-                </div>
-                <span id="supplementSummaryText">--</span>
-              </div>
-            </section>
-
             <section class="panel coach-panel" hidden>
               <div class="panel-head">
                 <div>
@@ -283,25 +264,21 @@
               <div class="panel-head">
                 <div>
                   <p class="eyebrow">身体状态</p>
-                  <h2>最新记录</h2>
+                  <h2>今日记录</h2>
                 </div>
               </div>
               <div class="metrics-grid">
                 <div>
                   <span>体重</span>
-                  <strong id="latestWeight">--</strong>
+                  <strong id="todayBodyWeight">--</strong>
                 </div>
                 <div>
                   <span>BMI</span>
-                  <strong id="latestBmi">--</strong>
+                  <strong id="todayBodyBmi">--</strong>
                 </div>
                 <div>
-                  <span>腰围</span>
-                  <strong id="latestWaist">--</strong>
-                </div>
-                <div>
-                  <span>空腹血糖</span>
-                  <strong id="latestGlucose">--</strong>
+                  <span>血压</span>
+                  <strong id="todayBloodPressure">--</strong>
                 </div>
               </div>
             </section>
@@ -326,7 +303,7 @@
               <p>我先看总热量，再补蛋白、控饮料和外卖。</p>
             </div>
             <div class="food-plate-bear" aria-hidden="true">
-              <img class="bear-reference-img bear-reference-card" src="./assets/bears/bear-ready.png?v=2026-07-01-ui-ia-fix" alt="" />
+              <img class="bear-reference-img bear-reference-card" src="./assets/bears/bear-ready.png?v=2026-07-02-home-summary-fix" alt="" />
               <svg class="soft-bear soft-bear-card soft-bear-food" viewBox="0 0 220 220">
                 <ellipse class="soft-bear-shadow" cx="112" cy="204" rx="58" ry="11"></ellipse>
                 <ellipse class="soft-bear-body" cx="112" cy="136" rx="50" ry="57"></ellipse>
@@ -755,7 +732,7 @@
               <p id="exerciseProgressText">我今天还没动，先安排一点轻活动。</p>
             </div>
             <div class="exercise-bear" aria-hidden="true">
-              <img class="bear-reference-img bear-reference-card" src="./assets/bears/bear-sport.png?v=2026-07-01-ui-ia-fix" alt="" />
+              <img class="bear-reference-img bear-reference-card" src="./assets/bears/bear-sport.png?v=2026-07-02-home-summary-fix" alt="" />
               <svg class="soft-bear soft-bear-card soft-bear-sport" viewBox="0 0 220 220">
                 <ellipse class="soft-bear-shadow" cx="112" cy="204" rx="58" ry="11"></ellipse>
                 <ellipse class="soft-bear-body" cx="112" cy="137" rx="50" ry="57"></ellipse>
@@ -871,7 +848,7 @@
               <p id="trendCoachText">连续记录 3 天后，我会更容易看出节奏。</p>
             </div>
             <div class="trend-bear" aria-hidden="true">
-              <img class="bear-reference-img bear-reference-card" src="./assets/bears/bear-happy.png?v=2026-07-01-ui-ia-fix" alt="" />
+              <img class="bear-reference-img bear-reference-card" src="./assets/bears/bear-happy.png?v=2026-07-02-home-summary-fix" alt="" />
               <svg class="soft-bear soft-bear-card soft-bear-trend" viewBox="0 0 220 220">
                 <ellipse class="soft-bear-shadow" cx="112" cy="204" rx="58" ry="11"></ellipse>
                 <ellipse class="soft-bear-body" cx="112" cy="137" rx="50" ry="57"></ellipse>
@@ -1217,6 +1194,6 @@
 
     <div id="actionFeedback" class="action-feedback" aria-live="polite" hidden></div>
 
-    <script src="./app.js?v=2026-07-01-ui-ia-fix"></script>
+    <script src="./app.js?v=2026-07-02-home-summary-fix"></script>
   </body>
 </html>

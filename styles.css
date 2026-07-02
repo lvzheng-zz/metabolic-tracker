@@ -2485,10 +2485,15 @@ button:disabled {
 .bear-state-card {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 0.95fr) minmax(300px, 1.05fr);
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.72fr);
+  grid-template-areas:
+    "copy bear"
+    "metrics bear"
+    "meter meter"
+    "pills pills";
   align-items: center;
   gap: 18px;
-  min-height: 280px;
+  min-height: 250px;
   background:
     linear-gradient(135deg, rgba(217, 241, 237, 0.94), rgba(255, 247, 223, 0.72) 52%, rgba(255, 240, 233, 0.82)),
     var(--surface);
@@ -2532,6 +2537,8 @@ button:disabled {
 }
 
 .bear-state-copy {
+  grid-area: copy;
+  align-self: end;
   min-width: 0;
 }
 
@@ -2564,6 +2571,7 @@ button:disabled {
 }
 
 .bear-state-main {
+  grid-area: bear;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2573,7 +2581,7 @@ button:disabled {
 
 .bear-state-card .hero-companion {
   position: static;
-  width: clamp(156px, 27vw, 250px);
+  width: clamp(150px, 23vw, 230px);
   height: auto;
 }
 
@@ -2627,24 +2635,6 @@ button:disabled {
   animation-duration: 1.4s;
 }
 
-.bear-balance-ring {
-  width: clamp(142px, 28vw, 178px);
-  height: clamp(142px, 28vw, 178px);
-  background:
-    radial-gradient(circle at center, var(--surface) 57%, transparent 59%),
-    conic-gradient(var(--balance-color) var(--balance-progress), #e3eee8 0deg);
-  box-shadow: inset 0 0 0 1px rgba(15, 118, 110, 0.05);
-}
-
-.bear-balance-ring span {
-  font-size: clamp(28px, 6vw, 42px);
-}
-
-.bear-balance-ring small {
-  margin-top: -40px;
-  font-weight: 800;
-}
-
 .today-core-grid,
 .today-pill-row,
 .quick-record-grid,
@@ -2657,8 +2647,13 @@ button:disabled {
 }
 
 .today-core-grid {
+  grid-area: metrics;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  margin-top: 16px;
+  margin-top: 2px;
+}
+
+.bear-state-card > .meter {
+  grid-area: meter;
 }
 
 .today-metric,
@@ -2724,8 +2719,9 @@ button:disabled {
 }
 
 .today-pill-row {
+  grid-area: pills;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin-top: 14px;
+  margin-top: 0;
 }
 
 .today-pill,
@@ -2751,6 +2747,9 @@ button:disabled {
 }
 
 .today-progress-card span {
+  display: block;
+  width: 100%;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2949,16 +2948,12 @@ button:disabled {
   order: 5;
 }
 
-.supplement-summary-panel {
+.latest-body-panel {
   order: 6;
 }
 
-.latest-body-panel {
-  order: 7;
-}
-
 .today-detail-panel {
-  order: 8;
+  order: 7;
 }
 
 .month-rings-panel {
@@ -3169,7 +3164,6 @@ button:disabled {
     grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 
-  .bear-state-card,
   .food-plate-panel,
   .exercise-hero-panel,
   .trend-hero-panel {
@@ -3177,7 +3171,7 @@ button:disabled {
   }
 
   .bear-state-main {
-    order: -1;
+    order: initial;
   }
 
   .quick-record-grid,
@@ -3196,7 +3190,9 @@ button:disabled {
   }
 
   .bear-state-card {
+    grid-template-columns: minmax(0, 1fr) minmax(128px, 0.55fr);
     min-height: 0;
+    gap: 12px;
   }
 
   .bear-state-main {
@@ -3239,16 +3235,7 @@ button:disabled {
   }
 
   .bear-state-card .hero-companion {
-    width: 146px;
-  }
-
-  .bear-balance-ring {
-    width: 146px;
-    height: 146px;
-  }
-
-  .bear-balance-ring small {
-    margin-top: -34px;
+    width: 124px;
   }
 
   .quick-record-grid,
