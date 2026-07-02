@@ -7,6 +7,7 @@
   --muted: #65717f;
   --line: #d9e4df;
   --teal: #0f766e;
+  --teal-dark: #064e47;
   --teal-soft: #d9f1ed;
   --blue: #2563eb;
   --blue-soft: #e5edff;
@@ -414,6 +415,41 @@ main {
   font-size: 18px;
 }
 
+.profile-settings-details {
+  border: 0;
+}
+
+.profile-settings-details > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 42px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.profile-settings-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.profile-settings-details > summary strong {
+  display: block;
+  font-size: 19px;
+  line-height: 1.2;
+}
+
+.profile-settings-details > summary small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-align: right;
+}
+
+.profile-settings-details > .form-grid {
+  margin-top: 16px;
+}
+
 .profile-layout {
   grid-template-columns: minmax(0, 1fr) minmax(320px, 0.86fr);
   align-items: start;
@@ -423,6 +459,26 @@ main {
 .device-link-box,
 .profile-note {
   grid-column: 1 / -1;
+}
+
+.profile-settings-panel {
+  order: 1;
+}
+
+.device-link-box {
+  order: 2;
+}
+
+.data-panel {
+  order: 3;
+}
+
+.cloud-sync-box {
+  order: 4;
+}
+
+.profile-note {
+  order: 5;
 }
 
 .panel {
@@ -905,6 +961,37 @@ main {
 .entry-list {
   display: grid;
   gap: 10px;
+}
+
+.ai-advice-card {
+  display: grid;
+  gap: 6px;
+  margin-top: 16px;
+  padding: 12px;
+  border: 1px solid rgba(15, 118, 110, 0.16);
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, rgba(217, 241, 237, 0.54), rgba(255, 247, 223, 0.58));
+  color: var(--ink);
+}
+
+.ai-advice-card strong {
+  color: var(--teal-dark);
+  font-size: 13px;
+}
+
+.ai-advice-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.ai-advice-card[data-tone="ai"] {
+  border-color: rgba(124, 92, 255, 0.22);
+  background: linear-gradient(135deg, rgba(238, 234, 255, 0.72), rgba(217, 241, 237, 0.5));
+}
+
+.ai-advice-card + .entry-list {
+  margin-top: 14px;
 }
 
 .suggestion {
@@ -1451,6 +1538,30 @@ button:disabled {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+
+.cloud-endpoint-field {
+  display: none;
+}
+
+.cloud-login-summary {
+  padding: 12px;
+  border: 1px solid rgba(21, 128, 61, 0.18);
+  border-radius: var(--radius);
+  background: rgba(240, 248, 242, 0.9);
+}
+
+.cloud-login-summary strong,
+.cloud-login-summary p {
+  display: block;
+  margin: 0;
+}
+
+.cloud-login-summary p {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
 }
 
 .cloud-sync-actions {

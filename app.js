@@ -1,6 +1,6 @@
 const STORAGE_KEY = "metabolic-tracker-v1";
 const AUTH_STORAGE_KEY = "metabolic-tracker-auth-v1";
-const APP_VERSION = "2026-07-02-home-summary-fix";
+const APP_VERSION = "2026-07-02-advice-ia";
 const BEAR_ASSETS = {
   ready: "bear-hero.png",
   normal: "bear-hero.png",
@@ -268,6 +268,8 @@ let authState = loadAuthState();
 let monthCursor = null;
 let chartAnimationToken = 0;
 let trendRangeDays = 7;
+const adviceCache = new Map();
+const adviceInFlight = new Map();
 const supplementReminderSent = new Set();
 
 function normalizeSupplementItems(items) {
@@ -988,6 +990,29 @@ function renderProfileSummary() {
     const weight = currentWeight();
     weightState.textContent = weight ? formatUnit(weight, "kg", 1) : "未记录";
   }
+  renderProfileSettingsState();
+}
+
+function profileSummaryText() {
+  const parts = [];
+  const sexLabel = state.settings.sex === "male" ? "男" : state.settings.sex === "female" ? "女" : "";
+  const age = toNumber(state.settings.age);
+  const height = toNumber(state.settings.height);
+  const target = baseTarget();
+  if (sexLabel) parts.push(sexLabel);
+  if (age) parts.push(`${age}岁`);
+  if (height) parts.push(`${height}cm`);
+  if (target) parts.push(`${Math.round(target)} kcal`);
+  return parts.length ? parts.join(" · ") : "还没填写完整";
+}
+
+function renderProfileSettingsState() {
+  const details = $("#profileSettingsDetails");
+  const preview = $("#profileSettingsPreview");
+  if (preview) preview.textContent = profileSummaryText();
+  if (!details || details.dataset.initialized === "true") return;
+  details.open = !profileIsComplete();
+  details.dataset.initialized = "true";
 }
 
 function openProfileCenter() {
@@ -1000,11 +1025,12 @@ function openProfileCenter() {
 function mountTrendsInProfile() {
   const trends = $("#trends");
   const profilePage = $("#profile .profile-page");
-  if (!trends || !profilePage || trends.dataset.mountedInProfile === "true") return;
+  const profileLayout = $("#profile .profile-layout");
+  if (!trends || !profilePage) return;
   trends.classList.remove("view", "is-active");
   trends.classList.add("profile-trends");
   trends.dataset.mountedInProfile = "true";
-  profilePage.append(trends);
+  profilePage.insertBefore(trends, profileLayout || null);
 }
 
 function openCheckupModal() {
@@ -1625,6 +1651,142 @@ function restoreDefaultSupplements() {
   renderAll();
 }
 
+function setAdviceCard(kind, text, tone = "normal") {
+  const card = $(`#${kind}AiAdvice`);
+  const textNode = $(`#${kind}AiAdviceText`);
+  if (!card || !textNode) return;
+  card.dataset.tone = tone;
+  textNode.textContent = text;
+}
+
+function localFoodAdvice(totals, targets, entries) {
+  if (!entries.length) return "今天还没有饮食记录，先把主食、肉类和饮料记上；外卖不用追求精确，先估大类和份量。";
+  if (targets.kcal && totals.kcal > targets.kcal * 1.08) return "今天摄入已经偏高，下一餐先清淡一点，优先补蔬菜和足量水，别用极端少吃来补。";
+  if (targets.protein && totals.protein < targets.protein * 0.7) return "今天蛋白还偏少，下一餐优先选鸡蛋、鱼虾、瘦肉、豆腐或无糖酸奶。";
+  if (targets.kcal && totals.kcal < targets.kcal * 0.45) return "今天记录的能量还少，先确认有没有漏记早餐、饮料、油和零食。";
+  return "今天饮食节奏还可以，下一餐继续优先记录主食、蛋白和含糖饮料，份量不用过度纠结。";
+}
+
+function localExerciseAdvice(total, entries) {
+  if (!entries.length) return "今天还没有运动记录，先安排 10 到 20 分钟轻活动，能走起来就算开始。";
+  if (total.minutes < 20) return "今天已经动起来了，可以再补一点低强度活动，把分钟数先稳定下来。";
+  if (total.minutes < 45) return "今天运动有记录，强度不用硬顶，后面优先保持连续性。";
+  return "今天运动量不错，晚上注意恢复和睡眠，运动抵扣别一次性全部吃回。";
+}
+
+function localWeeklyAdvice(week) {
+  const avgFood = Math.round(week.food / Math.max(1, week.days));
+  const moveText = Math.round(week.minutes);
+  if (week.food <= 0 && week.minutes <= 0) return "本周数据还少，下周先把饮食和运动各记录 3 天，我再帮你看节奏。";
+  if (week.minutes < 90) return `本周平均摄入约 ${avgFood} kcal，运动 ${moveText} 分钟。下周先把运动稳定到 3 次轻活动，再看热量微调。`;
+  return `本周平均摄入约 ${avgFood} kcal，运动 ${moveText} 分钟。下周继续保持记录，优先稳住蛋白和睡眠。`;
+}
+
+function advicePayloadHash(payload) {
+  return hashText(JSON.stringify(payload));
+}
+
+function requestAiAdvice(kind, payload, fallbackText) {
+  const hash = `${kind}:${advicePayloadHash(payload)}`;
+  if (adviceCache.has(hash)) {
+    setAdviceCard(kind, adviceCache.get(hash), "ai");
+    return;
+  }
+  setAdviceCard(kind, fallbackText, "local");
+  if (adviceInFlight.has(hash) || window.location.protocol === "file:") return;
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), 18_000);
+  const request = fetch("/api/advice", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+    signal: controller.signal
+  })
+    .then((response) => (response.ok ? response.json() : Promise.reject(new Error(`HTTP ${response.status}`))))
+    .then((data) => {
+      const advice = String(data.advice || "").trim();
+      if (!advice) throw new Error("empty advice");
+      adviceCache.set(hash, advice);
+      setAdviceCard(kind, advice, "ai");
+    })
+    .catch(() => {
+      adviceCache.set(hash, fallbackText);
+      setAdviceCard(kind, fallbackText, "local");
+    })
+    .finally(() => {
+      window.clearTimeout(timeoutId);
+      adviceInFlight.delete(hash);
+    });
+  adviceInFlight.set(hash, request);
+}
+
+function foodAdvicePayload(date, totals, targets, entries) {
+  return {
+    type: "food-day",
+    date,
+    summary: {
+      kcal: Math.round(totals.kcal),
+      targetKcal: Math.round(targets.kcal || 0),
+      protein: round(totals.protein, 1),
+      proteinTarget: round(targets.protein || 0, 1),
+      carbs: round(totals.carbs, 1),
+      fat: round(totals.fat, 1)
+    },
+    entries: entries.map((entry) => ({
+      meal: entry.meal,
+      foodName: entry.foodName,
+      grams: toNumber(entry.grams),
+      kcal: Math.round(((toNumber(entry.grams) || 0) * (toNumber(entry.kcal100) || 0)) / 100),
+      notes: entry.notes || ""
+    }))
+  };
+}
+
+function exerciseAdvicePayload(date, total, entries) {
+  return {
+    type: "exercise-day",
+    date,
+    summary: {
+      minutes: Math.round(total.minutes),
+      kcal: Math.round(total.kcal),
+      creditKcal: Math.round(total.credit)
+    },
+    entries: entries.map((entry) => ({
+      type: entry.type,
+      minutes: toNumber(entry.minutes),
+      kcal: toNumber(entry.kcal),
+      intensity: entry.intensity || "",
+      heartRate: toNumber(entry.heartRate),
+      notes: entry.notes || ""
+    }))
+  };
+}
+
+function weeklyAdvicePayload(date, week) {
+  const days = rangeDays(date, 7).map((day) => {
+    const summary = daySummary(day);
+    return {
+      date: day,
+      kcal: Math.round(summary.food.kcal),
+      netKcal: Math.round(summary.net),
+      budget: Math.round(summary.budget || 0),
+      protein: round(summary.food.protein, 1),
+      exerciseMinutes: Math.round(summary.exercise.minutes)
+    };
+  });
+  return {
+    type: "week",
+    date,
+    summary: {
+      avgFoodKcal: Math.round(week.food / Math.max(1, week.days)),
+      exerciseMinutes: Math.round(week.minutes),
+      creditKcal: Math.round(week.credit),
+      balanceKcal: Math.round((week.budget || 0) - week.food)
+    },
+    days
+  };
+}
+
 function renderFoodView() {
   const date = activeDate();
   const totals = foodTotals(date);
@@ -1649,6 +1811,7 @@ function renderFoodView() {
   const container = $("#foodEntries");
   container.innerHTML = "";
   const entries = entriesForDate(state.foodEntries, date).sort((a, b) => a.meal.localeCompare(b.meal, "zh-CN"));
+  requestAiAdvice("food", foodAdvicePayload(date, totals, targets, entries), localFoodAdvice(totals, targets, entries));
   if (!entries.length) {
     container.append(emptyState("当天还没有饮食记录。"));
     return;
@@ -1787,6 +1950,7 @@ function renderExerciseView() {
   const container = $("#exerciseEntries");
   container.innerHTML = "";
   const entries = entriesForDate(state.exerciseEntries, date);
+  requestAiAdvice("exercise", exerciseAdvicePayload(date, total, entries), localExerciseAdvice(total, entries));
   if (!entries.length) {
     container.append(emptyState("当天还没有运动记录。"));
     return;
@@ -1813,7 +1977,7 @@ function renderTrendStats() {
   const calorieLabel = $("#calorieChartRangeLabel");
   if (bodyLabel) bodyLabel.textContent = `${trendRangeDays} 天`;
   if (calorieLabel) calorieLabel.textContent = `${trendRangeDays} 天`;
-  const coach = $("#weeklyCoachSummary");
+  const coach = $("#weeklyAiAdviceText");
   if (coach) {
     const proteinDays = rangeDays(activeDate(), 7).filter((date) => {
       const totals = foodTotals(date);
@@ -1821,7 +1985,8 @@ function renderTrendStats() {
       return targets.protein && totals.protein >= targets.protein * 0.8;
     }).length;
     const moveDays = rangeDays(activeDate(), 7).filter((date) => exerciseTotals(date).minutes >= 20).length;
-    coach.textContent = `本周总结：平均摄入 ${Math.round(week.food / week.days)} kcal，蛋白达标 ${proteinDays} / 7 天，运动完成 ${moveDays} / 7 天。`;
+    const fallback = `${localWeeklyAdvice(week)} 蛋白达标 ${proteinDays} / 7 天，运动完成 ${moveDays} / 7 天。`;
+    requestAiAdvice("weekly", weeklyAdvicePayload(activeDate(), week), fallback);
   }
   const trendCoach = $("#trendCoachText");
   if (trendCoach) {
@@ -2594,6 +2759,8 @@ function handleSettingsSubmit(event) {
   event.preventDefault();
   clearTimeout(settingsAutosaveTimer);
   saveSettingsFromForm(event.currentTarget, "已保存");
+  const details = $("#profileSettingsDetails");
+  if (details && profileIsComplete()) details.open = false;
 }
 
 function currentCloudApiEndpoint() {
@@ -2632,6 +2799,16 @@ function renderCloudSyncSettings() {
   if (usernameInput && authState.username && !usernameInput.value) usernameInput.value = authState.username;
 
   const loggedIn = Boolean(authState.token);
+  const cloudBox = $(".cloud-sync-box");
+  const loginFields = $("#cloudLoginFields");
+  const loginButton = $("#cloudLogin");
+  const loggedInSummary = $("#cloudLoggedInSummary");
+  const loggedInText = $("#cloudLoggedInText");
+  if (cloudBox) cloudBox.classList.toggle("is-logged-in", loggedIn);
+  if (loginFields) loginFields.hidden = loggedIn;
+  if (loginButton) loginButton.hidden = loggedIn;
+  if (loggedInSummary) loggedInSummary.hidden = !loggedIn;
+  if (loggedInText) loggedInText.textContent = loggedIn ? `已登录 ${authState.username || "账号"}` : "请先登录";
   const badge = $("#cloudSyncBadge");
   if (badge) {
     badge.textContent = loggedIn ? `已登录 ${authState.username || "账号"}` : "未登录";
@@ -3504,7 +3681,7 @@ function drawBodyChart(progress = 1) {
   const canvas = $("#bodyChart");
   const { ctx, width, height } = canvasContext(canvas);
   const entries = [...state.bodyEntries]
-    .filter((entry) => toNumber(entry.weight) !== null || toNumber(entry.waist) !== null)
+    .filter((entry) => toNumber(entry.weight) !== null)
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(-trendRangeDays);
   if (!entries.length) {
@@ -3515,7 +3692,7 @@ function drawBodyChart(progress = 1) {
   const padding = { top: 28, right: 20, bottom: 44, left: 48 };
   const plotW = width - padding.left - padding.right;
   const plotH = height - padding.top - padding.bottom;
-  const values = entries.flatMap((entry) => [toNumber(entry.weight), toNumber(entry.waist)]).filter((value) => value !== null);
+  const values = entries.map((entry) => toNumber(entry.weight)).filter((value) => value !== null);
   const min = Math.floor(Math.min(...values) - 2);
   const max = Math.ceil(Math.max(...values) + 2);
   const scaleY = (value) => padding.top + plotH - ((value - min) / Math.max(1, max - min)) * plotH;
@@ -3543,13 +3720,10 @@ function drawBodyChart(progress = 1) {
   }
 
   drawLine(ctx, entries, "weight", scaleX, scaleY, "#0f766e", progress);
-  drawLine(ctx, entries, "waist", scaleX, scaleY, "#b45309", progress);
 
   ctx.textAlign = "left";
   ctx.fillStyle = "#0f766e";
   ctx.fillText("体重 kg", padding.left, 16);
-  ctx.fillStyle = "#b45309";
-  ctx.fillText("腰围 cm", padding.left + 72, 16);
   ctx.fillStyle = "#65717f";
   ctx.textAlign = "center";
   const bodyLabelStep = Math.max(1, Math.ceil(entries.length / 6));
@@ -3610,7 +3784,7 @@ function drawCalorieChart(progress = 1) {
   const padding = { top: 28, right: 20, bottom: 44, left: 48 };
   const plotW = width - padding.left - padding.right;
   const plotH = height - padding.top - padding.bottom;
-  const max = Math.max(...data.map((day) => Math.max(day.food.kcal, day.budget || 0)), 1000);
+  const max = Math.max(...data.map((day) => Math.max(day.food.kcal, Math.max(0, day.net || 0))), 1000);
   const scaleY = (value) => padding.top + plotH - (value / max) * plotH;
   const barW = Math.max(8, plotW / data.length - 8);
 
@@ -3658,7 +3832,7 @@ function drawCalorieChart(progress = 1) {
   ctx.beginPath();
   data.forEach((day, index) => {
     const x = padding.left + (plotW / data.length) * index + plotW / data.length / 2;
-    const y = scaleY(day.budget || 0);
+    const y = scaleY(Math.max(0, day.net || 0));
     if (index === 0) ctx.moveTo(x, y);
     else ctx.lineTo(x, y);
   });
@@ -3669,7 +3843,7 @@ function drawCalorieChart(progress = 1) {
   ctx.fillStyle = "#0f766e";
   ctx.fillText("摄入", padding.left, 16);
   ctx.fillStyle = "#2563eb";
-  ctx.fillText("预算", padding.left + 46, 16);
+  ctx.fillText("净摄入", padding.left + 46, 16);
 }
 
 function renderAll() {

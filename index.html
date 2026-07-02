@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="zh-CN">
   <head>
     <meta charset="utf-8" />
@@ -7,7 +7,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="减脂记录" />
     <title>代谢减脂记录</title>
-    <link rel="stylesheet" href="./styles.css?v=2026-07-02-home-summary-fix" />
+    <link rel="stylesheet" href="./styles.css?v=2026-07-02-advice-ia" />
   </head>
   <body>
     <div class="app-shell" data-current-view="dashboard">
@@ -67,7 +67,7 @@
               <div class="bear-state-main">
                 <div class="hero-companion" aria-hidden="true">
                   <div class="bear-mascot">
-                    <img id="bearMascotImage" class="bear-reference-img bear-reference-hero" src="./assets/bears/bear-hero.png?v=2026-07-02-home-summary-fix" alt="" />
+                    <img id="bearMascotImage" class="bear-reference-img bear-reference-hero" src="./assets/bears/bear-hero.png?v=2026-07-02-advice-ia" alt="" />
                     <svg class="soft-bear soft-bear-main" viewBox="0 0 240 260" role="img">
                       <ellipse class="soft-bear-shadow" cx="122" cy="238" rx="74" ry="14"></ellipse>
                       <ellipse class="soft-bear-body" cx="122" cy="166" rx="62" ry="72"></ellipse>
@@ -303,7 +303,7 @@
               <p>我先看总热量，再补蛋白、控饮料和外卖。</p>
             </div>
             <div class="food-plate-bear" aria-hidden="true">
-              <img class="bear-reference-img bear-reference-card" src="./assets/bears/bear-ready.png?v=2026-07-02-home-summary-fix" alt="" />
+              <img class="bear-reference-img bear-reference-card" src="./assets/bears/bear-ready.png?v=2026-07-02-advice-ia" alt="" />
               <svg class="soft-bear soft-bear-card soft-bear-food" viewBox="0 0 220 220">
                 <ellipse class="soft-bear-shadow" cx="112" cy="204" rx="58" ry="11"></ellipse>
                 <ellipse class="soft-bear-body" cx="112" cy="136" rx="50" ry="57"></ellipse>
@@ -406,7 +406,7 @@
                   <input name="kcal100" type="number" min="0" step="1" placeholder="116" required />
                 </label>
                 <details class="advanced-fields form-advanced-record span-2">
-                  <summary>高级记录</summary>
+                  <summary>详细补充</summary>
                   <div class="form-grid">
                     <label class="field">
                       <span>蛋白 /100g</span>
@@ -494,6 +494,10 @@
                   <strong id="foodTotalFat">--</strong>
                 </div>
               </div>
+              <div id="foodAiAdvice" class="ai-advice-card" data-tone="loading">
+                <strong>AI 建议</strong>
+                <p id="foodAiAdviceText">我会根据当天饮食汇总给出下一餐建议。</p>
+              </div>
               <div id="foodEntries" class="entry-list"></div>
             </section>
           </div>
@@ -523,14 +527,14 @@
                   <input name="sleep" type="number" min="0" max="24" step="0.1" />
                 </label>
                 <details class="advanced-fields form-advanced-record span-2">
-                  <summary>高级记录</summary>
+                  <summary>备注</summary>
                   <div class="form-grid">
                     <label class="field span-2">
                       <span>临时用药/异常</span>
                       <input name="medication" placeholder="漏服 / 副作用 / 临时药物 / 不舒服" />
                     </label>
                     <label class="field span-2">
-                      <span>备注</span>
+                      <span>随笔一记</span>
                       <input name="notes" placeholder="饥饿感 / 压力 / 应酬 / 身体状态" />
                     </label>
                   </div>
@@ -716,7 +720,7 @@
                 </div>
                 <button id="checkupButton" class="ghost-button" type="button">
                   <span class="icon" data-icon="plus"></span>
-                  <span>高级记录</span>
+                  <span>复查指标</span>
                 </button>
               </div>
               <div id="bodyEntries" class="entry-list"></div>
@@ -732,7 +736,7 @@
               <p id="exerciseProgressText">我今天还没动，先安排一点轻活动。</p>
             </div>
             <div class="exercise-bear" aria-hidden="true">
-              <img class="bear-reference-img bear-reference-card" src="./assets/bears/bear-sport.png?v=2026-07-02-home-summary-fix" alt="" />
+              <img class="bear-reference-img bear-reference-card" src="./assets/bears/bear-sport.png?v=2026-07-02-advice-ia" alt="" />
               <svg class="soft-bear soft-bear-card soft-bear-sport" viewBox="0 0 220 220">
                 <ellipse class="soft-bear-shadow" cx="112" cy="204" rx="58" ry="11"></ellipse>
                 <ellipse class="soft-bear-body" cx="112" cy="137" rx="50" ry="57"></ellipse>
@@ -791,7 +795,7 @@
                   </select>
                 </label>
                 <details class="advanced-fields form-advanced-record span-2">
-                  <summary>高级记录</summary>
+                  <summary>详细补充</summary>
                   <div class="form-grid">
                     <label class="field">
                       <span>平均心率 bpm</span>
@@ -835,6 +839,10 @@
                   <strong id="exerciseCreditKcal">--</strong>
                 </div>
               </div>
+              <div id="exerciseAiAdvice" class="ai-advice-card" data-tone="loading">
+                <strong>AI 建议</strong>
+                <p id="exerciseAiAdviceText">我会根据当天运动汇总给出补充建议。</p>
+              </div>
               <div id="exerciseEntries" class="entry-list"></div>
             </section>
           </div>
@@ -848,7 +856,7 @@
               <p id="trendCoachText">连续记录 3 天后，我会更容易看出节奏。</p>
             </div>
             <div class="trend-bear" aria-hidden="true">
-              <img class="bear-reference-img bear-reference-card" src="./assets/bears/bear-happy.png?v=2026-07-02-home-summary-fix" alt="" />
+              <img class="bear-reference-img bear-reference-card" src="./assets/bears/bear-happy.png?v=2026-07-02-advice-ia" alt="" />
               <svg class="soft-bear soft-bear-card soft-bear-trend" viewBox="0 0 220 220">
                 <ellipse class="soft-bear-shadow" cx="112" cy="204" rx="58" ry="11"></ellipse>
                 <ellipse class="soft-bear-body" cx="112" cy="137" rx="50" ry="57"></ellipse>
@@ -888,7 +896,7 @@
               <div class="panel-head">
                 <div>
                   <p class="eyebrow" id="bodyChartRangeLabel">30 天</p>
-                  <h2>体重与腰围</h2>
+                  <h2>体重趋势</h2>
                 </div>
               </div>
               <canvas id="bodyChart" class="chart" height="260"></canvas>
@@ -897,7 +905,7 @@
               <div class="panel-head">
                 <div>
                   <p class="eyebrow" id="calorieChartRangeLabel">14 天</p>
-                  <h2>摄入与预算</h2>
+                  <h2>摄入和净摄入</h2>
                 </div>
               </div>
               <canvas id="calorieChart" class="chart" height="260"></canvas>
@@ -927,7 +935,10 @@
                   <strong id="weekBalance">--</strong>
                 </div>
               </div>
-              <p id="weeklyCoachSummary" class="weekly-coach-summary">记录几天后，我会有一段本周总结。</p>
+              <div id="weeklyAiAdvice" class="ai-advice-card weekly-coach-summary" data-tone="loading">
+                <strong>AI 本周总结</strong>
+                <p id="weeklyAiAdviceText">记录几天后，我会有一段本周总结。</p>
+              </div>
             </section>
           </div>
         </section>
@@ -958,12 +969,14 @@
 
             <div class="profile-layout">
               <section class="panel profile-settings-panel">
-                <div class="panel-head">
-                  <div>
-                    <p class="eyebrow">信息与目标</p>
-                    <h2>个人资料</h2>
-                  </div>
-                </div>
+                <details id="profileSettingsDetails" class="profile-settings-details" open>
+                  <summary>
+                    <span>
+                      <p class="eyebrow">信息与目标</p>
+                      <strong>个人资料</strong>
+                    </span>
+                    <small id="profileSettingsPreview">填写后会自动收起</small>
+                  </summary>
                 <form id="settingsForm" class="form-grid">
                   <div class="form-section-title span-2">基础资料</div>
                   <label class="field">
@@ -1027,6 +1040,7 @@
                   </button>
                   <p id="settingsStatus" class="save-status span-2" aria-live="polite"></p>
                 </form>
+                </details>
               </section>
 
               <section class="panel cloud-sync-box">
@@ -1037,8 +1051,12 @@
                   </div>
                   <span id="cloudSyncBadge" class="sync-badge">未登录</span>
                 </div>
-                <div class="cloud-sync-form">
-                  <label class="field span-2">
+                <div id="cloudLoggedInSummary" class="cloud-login-summary" hidden>
+                  <strong id="cloudLoggedInText">已登录</strong>
+                  <p>这台设备会使用已记住的登录状态同步数据。</p>
+                </div>
+                <div id="cloudLoginFields" class="cloud-sync-form">
+                  <label class="field span-2 cloud-endpoint-field">
                     <span>云接口</span>
                     <input id="cloudApiEndpoint" placeholder="/api" />
                   </label>
@@ -1052,7 +1070,7 @@
                   </label>
                 </div>
                 <div class="cloud-sync-actions">
-                  <button id="cloudLogin" class="secondary-button" type="button">
+                  <button id="cloudLogin" class="secondary-button cloud-login-button" type="button">
                     <span class="icon" data-icon="user"></span>
                     <span>登录并同步</span>
                   </button>
@@ -1194,6 +1212,6 @@
 
     <div id="actionFeedback" class="action-feedback" aria-live="polite" hidden></div>
 
-    <script src="./app.js?v=2026-07-02-home-summary-fix"></script>
+    <script src="./app.js?v=2026-07-02-advice-ia"></script>
   </body>
 </html>
