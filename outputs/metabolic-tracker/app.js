@@ -1,6 +1,6 @@
 const STORAGE_KEY = "metabolic-tracker-v1";
 const AUTH_STORAGE_KEY = "metabolic-tracker-auth-v1";
-const APP_VERSION = "2026-07-01-ui-ia-fix";
+const APP_VERSION = "2026-07-02-home-summary-fix";
 const BEAR_ASSETS = {
   ready: "bear-hero.png",
   normal: "bear-hero.png",
@@ -1030,14 +1030,9 @@ function renderDashboard() {
   $("#todayFoodKcal").textContent = formatKcal(summary.food.kcal);
   $("#todayExerciseKcal").textContent = formatKcal(summary.exercise.credit);
   $("#todayNetKcal").textContent = formatKcal(summary.net);
-  $("#balanceValue").textContent = summary.balance === null ? "--" : Math.round(summary.balance);
 
   const ratio = summary.budget ? Math.min(summary.food.kcal / summary.budget, 1.2) : 0;
   $("#calorieMeter").style.width = `${Math.min(ratio * 100, 100)}%`;
-  const ringDegrees = Math.min(ratio, 1) * 360;
-  const ringColor = ratio > 1.05 ? "var(--rose)" : ratio > 0.9 ? "var(--amber)" : "var(--teal)";
-  $("#balanceRing").style.setProperty("--balance-color", ringColor);
-  $("#balanceRing").style.setProperty("--balance-progress", `${ringDegrees}deg`);
 
   const moveTarget = 150;
   const bearState = bearMoodForDay(summary, targets, supplements);
@@ -1049,36 +1044,33 @@ function renderDashboard() {
   const moodText = $("#bearMoodText");
   if (moodTitle) moodTitle.textContent = bearState.title;
   if (moodText) moodText.textContent = bearState.text;
-  const proteinPill = $("#todayProteinPill");
+  const sleepPill = $("#todaySleepPill");
   const movePill = $("#todayMovePill");
-  const supplementPill = $("#todaySupplementPill");
-  const proteinRatio = targets.protein ? summary.food.protein / targets.protein : 0;
+  const waterPill = $("#todayWaterPill");
+  const sleepTarget = 7;
+  const sleep = latestSleepForMood(date);
   const moveRatio = summary.exercise.minutes / moveTarget;
   const setProgressBar = (selector, value) => {
     const bar = $(selector);
     if (bar) bar.style.width = `${Math.min(Math.max(value, 0), 1) * 100}%`;
   };
-  if (proteinPill) proteinPill.textContent = `蛋白 ${round(summary.food.protein, 1)} / ${round(targets.protein, 1)}g`;
+  if (sleepPill) sleepPill.textContent = sleep === null ? "睡眠 待记录" : `睡眠 ${round(sleep, 1)} / ${sleepTarget}h`;
   if (movePill) movePill.textContent = `运动 ${Math.round(summary.exercise.minutes)} / ${moveTarget}min`;
-  const supplementDone = supplements.taken ?? supplements.done ?? 0;
-  if (supplementPill) supplementPill.textContent = `补剂 ${supplementDone} / ${supplements.total}`;
-  setProgressBar("#todayProteinBar", proteinRatio);
+  if (waterPill) waterPill.textContent = "饮水 待记录";
+  setProgressBar("#todaySleepBar", sleep === null ? 0 : sleep / sleepTarget);
   setProgressBar("#todayMoveBar", moveRatio);
-  setProgressBar("#todaySupplementBar", supplements.total ? supplementDone / supplements.total : 0);
+  setProgressBar("#todayWaterBar", 0);
 
-  const latestWeight = currentWeight();
-  $("#latestWeight").textContent = latestWeight ? formatUnit(latestWeight, "kg", 1) : "--";
-  $("#latestBmi").textContent = latestWeight ? formatUnit(bmiFor(latestWeight), "", 1).trim() : "--";
-  const latestWaist = latestBodyMetric("waist");
-  const latestGlucose = latestBodyMetric("fastingGlucose");
-  $("#latestWaist").textContent = latestWaist ? formatUnit(latestWaist, "cm", 1) : "--";
-  $("#latestGlucose").textContent = latestGlucose
-    ? formatUnit(latestGlucose, "mmol/L", 1)
-    : "--";
+  const todayBody = entriesForDate(state.bodyEntries, date)[0] || {};
+  const displayWeight = toNumber(todayBody.weight) ?? currentWeight();
+  $("#todayBodyWeight").textContent = displayWeight ? formatUnit(displayWeight, "kg", 1) : "--";
+  $("#todayBodyBmi").textContent = displayWeight ? formatUnit(bmiFor(displayWeight), "", 1).trim() : "--";
+  const systolic = toNumber(todayBody.systolic);
+  const diastolic = toNumber(todayBody.diastolic);
+  $("#todayBloodPressure").textContent = systolic && diastolic ? `${systolic}/${diastolic}` : "--";
 
   renderGoalDashboard(date);
   renderMonthRings();
-  renderSupplementDashboard(date);
   renderSuggestions(date);
   renderTodayTimeline(date);
 }
