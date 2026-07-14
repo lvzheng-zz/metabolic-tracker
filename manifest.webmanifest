@@ -1,0 +1,20 @@
+{
+  "name": "代谢减脂记录",
+  "short_name": "减脂记录",
+  "description": "饮食、运动、身体与趋势记录",
+  "lang": "zh-CN",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "background_color": "#f7fbf6",
+  "theme_color": "#f7fbf6",
+  "icons": [
+    {
+      "src": "./assets/bear/neutral.webp",
+      "sizes": "768x768",
+      "type": "image/webp",
+      "purpose": "any"
+    }
+  ]
+}

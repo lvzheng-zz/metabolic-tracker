@@ -2,12 +2,17 @@
 <html lang="zh-CN">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#f7fbf6" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="减脂记录" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <title>代谢减脂记录</title>
-    <link rel="stylesheet" href="./styles.css?v=2026-07-02-advice-ia" />
+    <link rel="manifest" href="./manifest.webmanifest?v=2026-07-14-frequent-food-types" />
+    <link rel="icon" href="./assets/bear/neutral.webp" type="image/webp" />
+    <link rel="apple-touch-icon" href="./assets/bear/neutral.webp" />
+    <link rel="stylesheet" href="./styles.css?v=2026-07-14-frequent-food-types" />
   </head>
   <body>
     <div class="app-shell" data-current-view="dashboard">
@@ -17,7 +22,7 @@
             <span class="icon" data-icon="activity"></span>
           </div>
           <div>
-            <h1 id="appTitle">今天的我</h1>
+            <h1 id="appTitle">今日记录</h1>
             <p id="appSubtitle">记录饮食、运动和身体状态</p>
           </div>
         </div>
@@ -55,19 +60,24 @@
       <main>
         <section id="dashboard" class="view is-active">
           <div class="dashboard-grid">
-            <section class="panel hero-panel bear-state-card" id="bearStateCard" data-bear-mood="ready">
+            <section class="panel hero-panel bear-state-card" id="bearStateCard" data-bear-status="neutral" data-bear-mood="normal">
               <div class="bear-state-copy">
                 <div class="bear-state-labels">
-                  <p class="eyebrow">今天的我</p>
-                  <span>小熊状态</span>
+                  <p class="eyebrow">今日记录</p>
+                  <span id="bearStatusName">默认状态</span>
                 </div>
-                <h2 id="bearMoodTitle">我准备开始新的一天</h2>
-                <p id="bearMoodText">我今天还没开始记录，先记一餐就好。</p>
+                <h2 id="bearMoodTitle">待记录</h2>
+                <p id="bearMoodText">饮食 · 运动 · 身体</p>
               </div>
               <div class="bear-state-main">
                 <div class="hero-companion" aria-hidden="true">
                   <div class="bear-mascot">
-                    <img id="bearMascotImage" class="bear-reference-img bear-reference-hero" src="./assets/bears/bear-hero.png?v=2026-07-02-advice-ia" alt="" />
+                    <img id="bearMascotImage" class="bear-reference-img bear-reference-hero" src="./assets/bear/neutral.webp?v=2026-07-03-health-shortcut" alt="" hidden />
+                    <div id="bearStatusPlaceholder" class="bear-status-placeholder">
+                      <span class="bear-status-token">neutral</span>
+                      <strong>状态图待替换</strong>
+                      <small class="bear-status-visual">正常站立，表情平静</small>
+                    </div>
                     <svg class="soft-bear soft-bear-main" viewBox="0 0 240 260" role="img">
                       <ellipse class="soft-bear-shadow" cx="122" cy="238" rx="74" ry="14"></ellipse>
                       <ellipse class="soft-bear-body" cx="122" cy="166" rx="62" ry="72"></ellipse>
@@ -303,7 +313,7 @@
               <p>我先看总热量，再补蛋白、控饮料和外卖。</p>
             </div>
             <div class="food-plate-bear" aria-hidden="true">
-              <img class="bear-reference-img bear-reference-card" src="./assets/bears/bear-ready.png?v=2026-07-02-advice-ia" alt="" />
+              <img class="bear-reference-img bear-reference-card" src="./assets/bear/neutral.webp?v=2026-07-03-health-shortcut" alt="" />
               <svg class="soft-bear soft-bear-card soft-bear-food" viewBox="0 0 220 220">
                 <ellipse class="soft-bear-shadow" cx="112" cy="204" rx="58" ry="11"></ellipse>
                 <ellipse class="soft-bear-body" cx="112" cy="136" rx="50" ry="57"></ellipse>
@@ -377,7 +387,7 @@
                 <p id="foodAiStatus" class="save-status" aria-live="polite"></p>
                 <div id="foodAiDrafts" class="ai-draft-list"></div>
               </div>
-              <form id="foodForm" class="form-grid">
+              <form id="foodForm" class="form-grid" novalidate>
                 <label class="field entry-date-field">
                   <span>日期</span>
                   <input name="date" type="date" required />
@@ -426,10 +436,17 @@
                     </label>
                   </div>
                 </details>
-                <button class="primary-button span-2" type="submit">
-                  <span class="icon" data-icon="plus"></span>
-                  <span>加入饮食</span>
-                </button>
+                <div id="pendingFoodItems" class="pending-food-items span-2" hidden></div>
+                <div class="food-form-actions span-2">
+                  <button id="stageFoodItem" class="secondary-button" type="button">
+                    <span class="icon" data-icon="plus"></span>
+                    <span>再加一种</span>
+                  </button>
+                  <button id="saveFoodMeal" class="primary-button" type="submit">
+                    <span class="icon" data-icon="save"></span>
+                    <span>保存本餐</span>
+                  </button>
+                </div>
               </form>
               <details class="advanced-fields food-quick-panel food-quick-details">
                 <summary>快速记录</summary>
@@ -447,25 +464,13 @@
                     <strong>手动添加</strong>
                   </button>
                 </div>
-                <div class="food-chip-groups">
-                  <div class="food-chip-group">
-                    <strong>常用食物</strong>
-                    <button class="food-chip" type="button" data-food-preset="米饭（熟）">米饭</button>
-                    <button class="food-chip" type="button" data-food-preset="鸡蛋">鸡蛋</button>
-                    <button class="food-chip" type="button" data-food-preset="鸡胸肉（熟）">鸡胸肉</button>
-                    <button class="food-chip" type="button" data-food-preset="纯牛奶">牛奶</button>
-                    <button class="food-chip" type="button" data-food-preset="无糖酸奶">酸奶</button>
+                <section class="frequent-food-section" aria-labelledby="frequentFoodTitle">
+                  <div class="frequent-food-heading">
+                    <strong id="frequentFoodTitle">常吃记录</strong>
+                    <span>最近使用优先</span>
                   </div>
-                  <div class="food-chip-group">
-                    <strong>外卖快捷估算</strong>
-                    <button class="food-chip" type="button" data-food-template="盖饭">盖饭</button>
-                    <button class="food-chip" type="button" data-food-template="炒饭">炒饭</button>
-                    <button class="food-chip" type="button" data-food-template="炸鸡">炸鸡</button>
-                    <button class="food-chip" type="button" data-food-template="汉堡">汉堡</button>
-                    <button class="food-chip" type="button" data-food-template="麻辣烫">麻辣烫</button>
-                    <button class="food-chip" type="button" data-food-template="奶茶">奶茶</button>
-                  </div>
-                </div>
+                  <div id="frequentFoodRecords" class="frequent-food-list"></div>
+                </section>
               </details>
             </section>
 
@@ -736,7 +741,7 @@
               <p id="exerciseProgressText">我今天还没动，先安排一点轻活动。</p>
             </div>
             <div class="exercise-bear" aria-hidden="true">
-              <img class="bear-reference-img bear-reference-card" src="./assets/bears/bear-sport.png?v=2026-07-02-advice-ia" alt="" />
+              <img class="bear-reference-img bear-reference-card" src="./assets/bear/exercise-done.webp?v=2026-07-03-health-shortcut" alt="" />
               <svg class="soft-bear soft-bear-card soft-bear-sport" viewBox="0 0 220 220">
                 <ellipse class="soft-bear-shadow" cx="112" cy="204" rx="58" ry="11"></ellipse>
                 <ellipse class="soft-bear-body" cx="112" cy="137" rx="50" ry="57"></ellipse>
@@ -849,14 +854,19 @@
         </section>
 
         <section id="trends" class="view">
-          <section class="panel trend-hero-panel">
+          <section class="panel trend-hero-panel" id="trendHeroPanel" data-bear-status="empty_trend" data-bear-mood="normal">
             <div>
               <p class="eyebrow">趋势观察</p>
               <h2>我在看最近的变化</h2>
               <p id="trendCoachText">连续记录 3 天后，我会更容易看出节奏。</p>
             </div>
             <div class="trend-bear" aria-hidden="true">
-              <img class="bear-reference-img bear-reference-card" src="./assets/bears/bear-happy.png?v=2026-07-02-advice-ia" alt="" />
+              <img id="trendBearImage" class="bear-reference-img bear-reference-card" src="./assets/bear/empty-trend.webp?v=2026-07-03-health-shortcut" alt="" hidden />
+              <div id="trendBearPlaceholder" class="bear-status-placeholder is-compact">
+                <span class="bear-status-token">empty_trend</span>
+                <strong>状态图待替换</strong>
+                <small class="bear-status-visual">拿放大镜或看图表</small>
+              </div>
               <svg class="soft-bear soft-bear-card soft-bear-trend" viewBox="0 0 220 220">
                 <ellipse class="soft-bear-shadow" cx="112" cy="204" rx="58" ry="11"></ellipse>
                 <ellipse class="soft-bear-body" cx="112" cy="137" rx="50" ry="57"></ellipse>
@@ -969,7 +979,7 @@
 
             <div class="profile-layout">
               <section class="panel profile-settings-panel">
-                <details id="profileSettingsDetails" class="profile-settings-details" open>
+                <details id="profileSettingsDetails" class="profile-settings-details">
                   <summary>
                     <span>
                       <p class="eyebrow">信息与目标</p>
@@ -1124,12 +1134,12 @@
                 <div class="health-auto-panel">
                   <div class="device-import-copy">
                     <strong>Apple 健康自动同步</strong>
-                    <p>登录云端后复制配置，在 iPhone 快捷指令里把每日健康数据 POST 到接口。</p>
+                    <p>登录云端后复制完整模板：普通快捷指令负责读取健康，自动化只负责每天运行。</p>
                   </div>
                   <div class="device-import-actions">
                     <button id="copyHealthShortcutConfig" class="secondary-button" type="button">
                       <span class="icon" data-icon="copy"></span>
-                      <span>复制快捷指令配置</span>
+                      <span>复制完整模板</span>
                     </button>
                     <button id="pullHealthSyncNow" class="ghost-button" type="button">
                       <span class="icon" data-icon="refresh-cw"></span>
@@ -1139,7 +1149,7 @@
                   <details class="advanced-fields health-shortcut-steps">
                     <summary>快捷指令步骤</summary>
                     <div class="shortcut-steps">
-                      <p>自动化时间建议设在每天早上；先读取 Apple 健康近 1 天体重、体脂、睡眠、运动分钟、活动能量，再用“获取 URL 内容”发送 JSON。</p>
+                      <p>建议先建普通快捷指令「同步健康到减脂记录」，里面读取 Apple 健康并发送 JSON；自动化里只选择“运行快捷指令”。模板已内置 authToken，不需要再配置 Authorization 头。</p>
                     </div>
                   </details>
                   <p id="healthSyncStatus" class="save-status" aria-live="polite"></p>
@@ -1198,6 +1208,68 @@
       </main>
     </div>
 
+    <div id="frequentFoodModal" class="modal-backdrop" hidden>
+      <section class="profile-modal frequent-food-modal" role="dialog" aria-modal="true" aria-labelledby="frequentFoodEditTitle">
+        <div class="modal-head">
+          <div>
+            <p class="eyebrow">常吃记录</p>
+            <h2 id="frequentFoodEditTitle">编辑常吃食物</h2>
+          </div>
+          <button id="frequentFoodModalClose" class="close-button" type="button" title="关闭">
+            <span class="icon" data-icon="x"></span>
+          </button>
+        </div>
+        <form id="frequentFoodEditForm" class="form-grid">
+          <input name="id" type="hidden" />
+          <label class="field">
+            <span>餐次</span>
+            <select name="meal" required>
+              <option>早餐</option>
+              <option>午餐</option>
+              <option>晚餐</option>
+              <option>加餐</option>
+              <option>饮品</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>食物</span>
+            <input name="foodName" required />
+          </label>
+          <label class="field">
+            <span>重量 g</span>
+            <input name="grams" type="number" min="1" step="1" required />
+          </label>
+          <label class="field">
+            <span>热量 /100g</span>
+            <input name="kcal100" type="number" min="0" step="1" required />
+          </label>
+          <label class="field">
+            <span>蛋白 /100g</span>
+            <input name="protein100" type="number" min="0" step="0.1" />
+          </label>
+          <label class="field">
+            <span>碳水 /100g</span>
+            <input name="carbs100" type="number" min="0" step="0.1" />
+          </label>
+          <label class="field">
+            <span>脂肪 /100g</span>
+            <input name="fat100" type="number" min="0" step="0.1" />
+          </label>
+          <label class="field">
+            <span>备注</span>
+            <input name="notes" />
+          </label>
+          <div class="food-form-actions span-2">
+            <button id="frequentFoodEditCancel" class="ghost-button" type="button">取消</button>
+            <button class="primary-button" type="submit">
+              <span class="icon" data-icon="save"></span>
+              <span>保存修改</span>
+            </button>
+          </div>
+        </form>
+      </section>
+    </div>
+
     <template id="entryTemplate">
       <article class="entry-item">
         <div>
@@ -1212,6 +1284,6 @@
 
     <div id="actionFeedback" class="action-feedback" aria-live="polite" hidden></div>
 
-    <script src="./app.js?v=2026-07-02-advice-ia"></script>
+    <script src="./app.js?v=2026-07-14-frequent-food-types"></script>
   </body>
 </html>
